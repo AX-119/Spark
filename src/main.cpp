@@ -1,15 +1,14 @@
 #include <iostream>
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
-
-#define SOL_ALL_SAFETIES_ON 1
-#include <sol/sol.hpp>
-
-#include "gameobject.h"
-#include "testComponent.h"
-
+// move these somewhere else
+#include "GameObject.h"
+#include "TestComponent.h"
+#include "Components/ScriptComponent.h"
+#include "LuaInstance.h"
 // TODO: Create a concept of "scenes"
 // TODO: Create a scene mananger
 // TODO: Serialize scenes
@@ -84,24 +83,34 @@ void Render(SDL_Renderer *renderer)
 
     SDL_RenderPresent(renderer);
 }
-int main()
+
+int main(int argc, char *argv[])
 {
     InitSDL();
     auto window = CreateWindow();
     auto renderer = CreateRenderer(window);
 
+    auto &lua = spark::LuaInstance::GetInstance();
+    lua.Init();
+
+    // lua.GetState().script(R"(
+    //     -- Add your Lua script here
+    //     local myVector = vec3(1.0, 2.0, 3.0)
+    //     print("Initial vector:", tostring(myVector))
+
+    //     local scaleFactor = 5.0
+    //     local scaledVector = myVector * scaleFactor
+    //     print("Scaled vector: ", scaledVector)
+    // )");
     InitImgui(window, renderer);
 
-    sol::state lua;
-    lua.open_libraries(sol::lib::base);
-
-    lua.script("print('bark bark bark!')");
     // game loop
     bool running = true;
     bool windowOpen = true;
 
     auto go = std::make_unique<spark::GameObject>();
     go->AddComponent<spark::TestComponent>();
+    go->AddComponent<spark::ScriptComponent>("res/test.lua")->Init();
     g_gameObjects.emplace_back(go.get());
     while (running)
     {
@@ -116,14 +125,6 @@ int main()
         }
 
         // input
-
-        // I think this is a good point to end this stream :D
-        // Thank you for watching, I enjoyed this stream a lot
-        // Next time we can expand on the gameobject model, especially the transform component.
-        // Id like to use matrices and quaternions from the get go, so we can actually do 3d transforms
-        // we could add a "scriptable" tag or interface or something that would allow people to write some code in an imgui text editor and run it in game :D
-        // Again, thank you for watching!
-        // Until next time!
 
         // update
         for (auto &go : g_gameObjects)

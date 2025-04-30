@@ -2,7 +2,7 @@
 #define TESTCOMPONENT_H
 
 #include <imgui.h>
-#include "component.h"
+#include "Component.h"
 #include "Components/TransformComponent.h"
 #include "IImGuiRenderable.h"
 #include <SDL3/SDL.h>

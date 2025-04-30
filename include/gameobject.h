@@ -13,6 +13,7 @@
 namespace spark
 {
     class Component;
+    class TransformComponent;
     class GameObject final
     {
     public:
@@ -110,6 +111,8 @@ namespace spark
         std::vector<IUpdateable *> updateables;
         std::vector<IRenderable *> renderables;
         std::vector<IImGuiRenderable *> imguiRenderables;
+
+        TransformComponent *m_transform{};
 
         template <typename T>
         void RemoveInterfacePtr(std::vector<T *> &list, T *ptr)

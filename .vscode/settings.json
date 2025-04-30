@@ -67,6 +67,13 @@
         "thread": "cpp",
         "unordered_map": "cpp",
         "xhash": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "bitset": "cpp",
+        "deque": "cpp",
+        "fstream": "cpp",
+        "mutex": "cpp",
+        "set": "cpp",
+        "unordered_set": "cpp",
+        "variant": "cpp"
     }
 }
