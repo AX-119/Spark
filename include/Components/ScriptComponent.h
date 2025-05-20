@@ -19,10 +19,10 @@ namespace spark
 
         void Init();
 
-        void Update() override;
+        void Update(float dt) override;
         void Render() override;
         void RenderImGui() override;
-
+        void Test();
         bool ReloadScript();
 
     private:
@@ -30,6 +30,11 @@ namespace spark
         sol::environment m_scriptEnv;
 
         bool LoadAndExecuteScript();
+        bool m_hasInitFunction{true};
+        bool m_hasUpdateFunction{true};
+        bool m_hasRenderFunction{true};
+        bool m_hasRenderImGuiFunction{true};
+
         sol::protected_function m_luaUpdate;
         sol::protected_function m_luaRender;
         sol::protected_function m_luaImGuiRender;

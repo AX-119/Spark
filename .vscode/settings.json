@@ -74,6 +74,12 @@
         "mutex": "cpp",
         "set": "cpp",
         "unordered_set": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "cstdarg": "cpp",
+        "ranges": "cpp",
+        "span": "cpp",
+        "condition_variable": "cpp",
+        "numeric": "cpp",
+        "random": "cpp"
     }
 }

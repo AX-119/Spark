@@ -18,13 +18,25 @@ namespace spark
             m_luaImGuiRender = m_scriptEnv["RenderImGui"];
 
             if (!m_luaInit.valid() || m_luaInit.get_type() != sol::type::function)
+            {
                 std::cerr << "Couldn't find \'Init()\' in lua script!\n";
+                m_hasInitFunction = false;
+            }
             if (!m_luaUpdate.valid() || m_luaUpdate.get_type() != sol::type::function)
+            {
                 std::cerr << "Couldn't find \'Update()\' in lua script!\n";
+                m_hasUpdateFunction = false;
+            }
             if (!m_luaRender.valid() || m_luaRender.get_type() != sol::type::function)
+            {
                 std::cerr << "Couldn't find \'Render()\' in lua script!\n";
+                m_hasRenderFunction = false;
+            }
             if (!m_luaImGuiRender.valid() || m_luaImGuiRender.get_type() != sol::type::function)
+            {
                 std::cerr << "Couldn't find \'RenderImGui()\' in lua script!\n";
+                m_hasRenderImGuiFunction = false;
+            }
         }
     }
     bool ScriptComponent::LoadAndExecuteScript()
@@ -40,10 +52,13 @@ namespace spark
         std::cerr << "Script loaded successfully! Path [ " << m_scriptPath << " ]\n";
         return true;
     }
-    void ScriptComponent::Update()
+    void ScriptComponent::Update(float dt)
     {
-        if (!m_luaUpdate.valid() || m_luaUpdate.get_type() != sol::type::function)
-            std::cerr << "Couldn't find \'Update()\' in lua script!\n";
+        if (!m_hasUpdateFunction)
+        {
+            return;
+        }
+
         auto result = m_luaUpdate();
         if (!result.valid())
         {
@@ -53,8 +68,11 @@ namespace spark
     }
     void ScriptComponent::Render()
     {
-        if (!m_luaRender.valid() || m_luaRender.get_type() != sol::type::function)
-            std::cerr << "Couldn't find \'Render()\' in lua script!\n";
+        if (!m_hasRenderFunction)
+        {
+            return;
+        }
+
         auto result = m_luaRender();
         if (!result.valid())
         {
@@ -64,8 +82,10 @@ namespace spark
     }
     void ScriptComponent::RenderImGui()
     {
-        if (!m_luaImGuiRender.valid() || m_luaImGuiRender.get_type() != sol::type::function)
-            std::cerr << "Couldn't find \'RenderImGui()\' in lua script!\n";
+        if (!m_hasRenderImGuiFunction)
+        {
+            return;
+        }
         auto result = m_luaImGuiRender();
         if (!result.valid())
         {

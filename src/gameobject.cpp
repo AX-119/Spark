@@ -6,34 +6,31 @@ namespace spark
     {
         m_transform = AddComponent<TransformComponent>();
     }
-
-    // LUA
-    // we need globals
-    // "gameobject" : owning gameobject
-    // "screen_width" , "screen_height"
-    // gameobject.Create({50,35, 0});
-    // function Update()
-    //      gameobject.transform.translate(10,10,0);
-    // end
-
-    void GameObject::Update()
+    void GameObject::Init()
     {
-        for (auto &u : updateables)
+        for (auto &u : m_initializables)
         {
-            u->Update();
+            u->Init();
         }
         for (auto &child : m_children)
         {
-            child->Update();
+            child->Init();
         }
-        // for(auto& script : luaScripts)
-        // {
-        //     lua.script(script);
-        // }
+    }
+    void GameObject::Update(float dt)
+    {
+        for (auto &u : m_updateables)
+        {
+            u->Update(dt);
+        }
+        for (auto &child : m_children)
+        {
+            child->Update(dt);
+        }
     }
     void GameObject::Render()
     {
-        for (auto &r : renderables)
+        for (auto &r : m_renderables)
         {
             r->Render();
         }
@@ -44,7 +41,7 @@ namespace spark
     }
     void GameObject::RenderImGui()
     {
-        for (auto &i : imguiRenderables)
+        for (auto &i : m_imguiRenderables)
         {
             i->RenderImGui();
         }
@@ -64,8 +61,6 @@ namespace spark
 
         if (newParent)
         {
-            // TODO
-            //  we actually set a new parent
             if (keepWorldPos)
             {
                 m_transform->SetLocalPosition(m_transform->GetWorldPosition() - m_parent->m_transform->GetWorldPosition());
@@ -101,5 +96,12 @@ namespace spark
         }
         return false;
     }
-
+    void GameObject::Delete()
+    {
+        m_isToBeDeleted = true;
+    }
+    bool GameObject::GetIsToBeDeleted() const
+    {
+        return m_isToBeDeleted;
+    }
 } // namespace spark

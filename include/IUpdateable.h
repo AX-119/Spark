@@ -6,7 +6,7 @@ namespace spark
     struct IUpdateable
     {
         virtual ~IUpdateable() = default;
-        virtual void Update() = 0;
+        virtual void Update(float dt) = 0;
     };
 
 } // namespace spark

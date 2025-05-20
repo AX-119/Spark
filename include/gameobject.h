@@ -5,7 +5,8 @@
 #include <vector>
 #include <memory>
 
-#include "component.h"
+#include "Component.h"
+#include "IInitializable.h"
 #include "IUpdateable.h"
 #include "IRenderable.h"
 #include "IImGuiRenderable.h"
@@ -26,7 +27,8 @@ namespace spark
         GameObject &operator=(const GameObject &other) = delete;
         GameObject &operator=(GameObject &&other) = delete;
 
-        void Update();
+        void Init();
+        void Update(float dt);
         void Render();
         void RenderImGui();
 
@@ -34,6 +36,9 @@ namespace spark
         GameObject *GetParent() const;
         const std::vector<GameObject *> &GetChildren() const;
         bool IsChild(GameObject *gameObject); // check if given GO is child of this
+
+        void Delete();
+        bool GetIsToBeDeleted() const;
 
         template <typename T, typename... Args>
         T *AddComponent(Args &&...args)
@@ -45,19 +50,23 @@ namespace spark
             auto component = std::make_unique<T>(this, std::forward<Args>(args)...);
             T *rawPtr = component.get();
 
-            components.emplace_back(std::move(component));
+            m_components.emplace_back(std::move(component));
 
+            if (auto *i = dynamic_cast<IInitializable *>(rawPtr))
+            {
+                m_initializables.emplace_back(i);
+            }
             if (auto *u = dynamic_cast<IUpdateable *>(rawPtr))
             {
-                updateables.emplace_back(u);
+                m_updateables.emplace_back(u);
             }
             if (auto *r = dynamic_cast<IRenderable *>(rawPtr))
             {
-                renderables.emplace_back(r);
+                m_renderables.emplace_back(r);
             }
             if (auto *i = dynamic_cast<IImGuiRenderable *>(rawPtr))
             {
-                imguiRenderables.emplace_back(i);
+                m_imguiRenderables.emplace_back(i);
             }
             return rawPtr;
         }
@@ -65,7 +74,7 @@ namespace spark
         template <typename T>
         T *GetComponent()
         {
-            for (auto &c : components)
+            for (auto &c : m_components)
             {
                 if (auto *casted = dynamic_cast<T *>(c.get()))
                 {
@@ -84,33 +93,37 @@ namespace spark
             if (!target)
                 return;
 
+            if (auto *i = dynamic_cast<IInitializable *>(target))
+            {
+                RemoveInterfacePtr(m_updateables, i);
+            }
             if (auto *u = dynamic_cast<IUpdateable *>(target))
             {
-                RemoveInterfacePtr(updateables, u);
+                RemoveInterfacePtr(m_updateables, u);
             }
             if (auto *r = dynamic_cast<IRenderable *>(target))
             {
-                RemoveInterfacePtr(renderables, r);
+                RemoveInterfacePtr(m_renderables, r);
             }
             if (auto *i = dynamic_cast<IImGuiRenderable *>(target))
             {
-                RemoveInterfacePtr(imguiRenderables, i);
+                RemoveInterfacePtr(m_imguiRenderables, i);
             }
-            std::erase_if(components, [target](const std::unique_ptr<Component> &comp)
+            std::erase_if(m_components, [target](const std::unique_ptr<Component> &comp)
                           { return comp.get() == target; });
         }
 
     private:
-        // uint32_t m_ID;
-        // char *m_name;
+        bool m_isToBeDeleted{};
         GameObject *m_parent{};
         std::vector<std::unique_ptr<GameObject>> m_children{};
         std::vector<GameObject *> m_childrenRawPtrs{};
 
-        std::vector<std::unique_ptr<Component>> components;
-        std::vector<IUpdateable *> updateables;
-        std::vector<IRenderable *> renderables;
-        std::vector<IImGuiRenderable *> imguiRenderables;
+        std::vector<std::unique_ptr<Component>> m_components;
+        std::vector<IInitializable *> m_initializables;
+        std::vector<IUpdateable *> m_updateables;
+        std::vector<IRenderable *> m_renderables;
+        std::vector<IImGuiRenderable *> m_imguiRenderables;
 
         TransformComponent *m_transform{};
 

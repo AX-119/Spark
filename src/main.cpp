@@ -9,10 +9,7 @@
 #include "TestComponent.h"
 #include "Components/ScriptComponent.h"
 #include "LuaInstance.h"
-// TODO: Create a concept of "scenes"
-// TODO: Create a scene mananger
-// TODO: Serialize scenes
-std::vector<spark::GameObject *> g_gameObjects{};
+#include "SceneManager.h"
 
 // SDL
 void InitSDL()
@@ -56,17 +53,31 @@ void ImguiNewFrame()
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 }
+void RenderWindowDockspace()
+{
+    const ImGuiViewport *viewport = ImGui::GetMainViewport();
 
-void Render(SDL_Renderer *renderer)
+    ImGuiID dockspaceID = ImGui::GetID("MyDockSpace");
+    ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
+    ImGui::DockSpaceOverViewport(dockspaceID, viewport, dockspaceFlags);
+}
+void ImGuiRenderSceneGraph()
+{
+    ImGui::Begin("SceneGraph", nullptr, ImGuiWindowFlags_NoCollapse);
+    ImGui::Text("Hierarchy:");
+    ImGui::Separator();
+
+    // render all gameobject and their children
+    ImGui::End();
+}
+
+void Render(SDL_Renderer *renderer, spark::SceneManager &sceneManager)
 {
 
     ImguiNewFrame();
-
-    // IMGUI window rendering goes here
-    for (auto &go : g_gameObjects)
-    {
-        go->RenderImGui();
-    }
+    RenderWindowDockspace();
+    ImGuiRenderSceneGraph();
+    sceneManager.ImGuiRender();
 
     ImGui::Render();
 
@@ -74,10 +85,7 @@ void Render(SDL_Renderer *renderer)
     SDL_RenderClear(renderer);
 
     // render game or whatever sdl has to handle here
-    for (auto &go : g_gameObjects)
-    {
-        go->Render();
-    }
+    sceneManager.Render();
 
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 
@@ -91,27 +99,19 @@ int main(int argc, char *argv[])
     auto renderer = CreateRenderer(window);
 
     auto &lua = spark::LuaInstance::GetInstance();
+    auto &sceneManager = spark::SceneManager::GetInstance();
     lua.Init();
-
-    // lua.GetState().script(R"(
-    //     -- Add your Lua script here
-    //     local myVector = vec3(1.0, 2.0, 3.0)
-    //     print("Initial vector:", tostring(myVector))
-
-    //     local scaleFactor = 5.0
-    //     local scaledVector = myVector * scaleFactor
-    //     print("Scaled vector: ", scaledVector)
-    // )");
     InitImgui(window, renderer);
 
     // game loop
     bool running = true;
     bool windowOpen = true;
 
-    auto go = std::make_unique<spark::GameObject>();
+    auto scene = sceneManager.GetCurrentScene();
+    auto go = scene->EmplaceGameObject();
     go->AddComponent<spark::TestComponent>();
     go->AddComponent<spark::ScriptComponent>("res/test.lua")->Init();
-    g_gameObjects.emplace_back(go.get());
+
     while (running)
     {
         SDL_Event e;
@@ -127,12 +127,9 @@ int main(int argc, char *argv[])
         // input
 
         // update
-        for (auto &go : g_gameObjects)
-        {
-            go->Update();
-        }
+        sceneManager.Update(0.016f);
         // render
-        Render(renderer);
+        Render(renderer, sceneManager);
     }
 
     QuitSDL(window);

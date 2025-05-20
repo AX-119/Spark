@@ -12,3 +12,9 @@ add_custom_command(TARGET Spark POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:SDL3::SDL3>
         $<TARGET_FILE_DIR:Spark>)
+
+# Copy res folder to output
+add_custom_command(TARGET Spark POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/res
+        $<TARGET_FILE_DIR:Spark>/res)
