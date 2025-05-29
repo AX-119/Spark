@@ -5,6 +5,7 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
 // move these somewhere else
+#include "EditorUI.h"
 #include "GameObject.h"
 #include "TestComponent.h"
 #include "Components/ScriptComponent.h"
@@ -25,61 +26,20 @@ SDL_Renderer *CreateRenderer(SDL_Window *window, const char *name = nullptr)
 {
     return SDL_CreateRenderer(window, name);
 }
-void QuitSDL(SDL_Window *window)
+void QuitSDL(SDL_Window *window, SDL_Renderer *renderer)
 {
-    SDL_DestroyWindow(window);
+    if (renderer)
+        SDL_DestroyRenderer(renderer);
+    if (window)
+        SDL_DestroyWindow(window);
     SDL_Quit();
 }
 
-// IMGUI
-void InitImgui(SDL_Window *window, SDL_Renderer *renderer)
-{
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO &io = ImGui::GetIO();
-    (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-    ImGui::StyleColorsDark();
-
-    ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
-    ImGui_ImplSDLRenderer3_Init(renderer);
-}
-void ImguiNewFrame()
-{
-    ImGui_ImplSDLRenderer3_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
-}
-void RenderWindowDockspace()
-{
-    const ImGuiViewport *viewport = ImGui::GetMainViewport();
-
-    ImGuiID dockspaceID = ImGui::GetID("MyDockSpace");
-    ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
-    ImGui::DockSpaceOverViewport(dockspaceID, viewport, dockspaceFlags);
-}
-void ImGuiRenderSceneGraph()
-{
-    ImGui::Begin("SceneGraph", nullptr, ImGuiWindowFlags_NoCollapse);
-    ImGui::Text("Hierarchy:");
-    ImGui::Separator();
-
-    // render all gameobject and their children
-    ImGui::End();
-}
-
-void Render(SDL_Renderer *renderer, spark::SceneManager &sceneManager)
+void Render(SDL_Renderer *renderer, spark::SceneManager &sceneManager, spark::EditorUI &editorUI)
 {
 
-    ImguiNewFrame();
-    RenderWindowDockspace();
-    ImGuiRenderSceneGraph();
-    sceneManager.ImGuiRender();
-
-    ImGui::Render();
+    editorUI.BeginFrame();
+    editorUI.Render(sceneManager);
 
     SDL_SetRenderDrawColor(renderer, 100, 149, 237, 255);
     SDL_RenderClear(renderer);
@@ -87,7 +47,7 @@ void Render(SDL_Renderer *renderer, spark::SceneManager &sceneManager)
     // render game or whatever sdl has to handle here
     sceneManager.Render();
 
-    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+    editorUI.EndFrame(renderer);
 
     SDL_RenderPresent(renderer);
 }
@@ -98,26 +58,41 @@ int main(int argc, char *argv[])
     auto window = CreateWindow();
     auto renderer = CreateRenderer(window);
 
+    if (!window || !renderer)
+    {
+        std::cerr << "Failed to initialize SDL window or renderer: " << SDL_GetError() << std::endl;
+        QuitSDL(window, renderer);
+        return 1;
+    }
+
     auto &lua = spark::LuaInstance::GetInstance();
     auto &sceneManager = spark::SceneManager::GetInstance();
     lua.Init();
-    InitImgui(window, renderer);
+
+    spark::EditorUI editorUI;
+    editorUI.Init(window, renderer);
+
+    auto scene = sceneManager.GetCurrentScene();
+    if (scene)
+    {
+        auto go = scene->EmplaceGameObject();
+        go->AddComponent<spark::TestComponent>();
+        go->AddComponent<spark::ScriptComponent>("res/test.lua")->Init();
+
+        auto go1 = scene->EmplaceGameObject("Hello");
+        auto go2 = scene->EmplaceGameObject("World");
+        go2->SetParent(go1);
+    }
 
     // game loop
     bool running = true;
-    bool windowOpen = true;
-
-    auto scene = sceneManager.GetCurrentScene();
-    auto go = scene->EmplaceGameObject();
-    go->AddComponent<spark::TestComponent>();
-    go->AddComponent<spark::ScriptComponent>("res/test.lua")->Init();
-
+    Uint64 lastTime = SDL_GetPerformanceCounter();
     while (running)
     {
         SDL_Event e;
         while (SDL_PollEvent(&e))
         {
-            ImGui_ImplSDL3_ProcessEvent(&e);
+            editorUI.ProcessEvent(&e);
             if (e.type == SDL_EVENT_QUIT)
                 running = false;
             if (e.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && e.window.windowID == SDL_GetWindowID(window))
@@ -127,11 +102,15 @@ int main(int argc, char *argv[])
         // input
 
         // update
-        sceneManager.Update(0.016f);
+        Uint64 currentTime = SDL_GetPerformanceCounter();
+        float dt = (currentTime - lastTime) / static_cast<float>(SDL_GetPerformanceFrequency());
+        lastTime = currentTime;
+        sceneManager.Update(dt);
         // render
-        Render(renderer, sceneManager);
+        Render(renderer, sceneManager, editorUI);
     }
 
-    QuitSDL(window);
+    editorUI.Shutdown();
+    QuitSDL(window, renderer);
     return 0;
 }

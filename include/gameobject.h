@@ -1,6 +1,7 @@
 #ifndef GAMEOBJECT_H
 #define GAMEOBJECT_H
 
+#include <string>
 #include <cstdint>
 #include <vector>
 #include <memory>
@@ -19,6 +20,7 @@ namespace spark
     {
     public:
         explicit GameObject();
+        explicit GameObject(const std::string &name);
 
         ~GameObject() = default;
 
@@ -39,6 +41,8 @@ namespace spark
 
         void Delete();
         bool GetIsToBeDeleted() const;
+
+        std::string GetName() const;
 
         template <typename T, typename... Args>
         T *AddComponent(Args &&...args)
@@ -114,6 +118,7 @@ namespace spark
         }
 
     private:
+        std::string m_name{"GameObject"};
         bool m_isToBeDeleted{};
         GameObject *m_parent{};
         std::vector<std::unique_ptr<GameObject>> m_children{};
