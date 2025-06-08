@@ -5,6 +5,7 @@
 #include <imgui.h>
 #include <memory>
 #include "SceneGraphPanel.h"
+#include "InspectorPanel.h"
 
 namespace spark
 {
@@ -27,6 +28,7 @@ namespace spark
     private:
         void SetupDockspace();
         std::unique_ptr<SceneGraphPanel> m_sceneGraphPanel;
+        std::unique_ptr<InspectorPanel> m_inspectorPanel;
 
         GameObject *m_selectedGameObject{nullptr};
     };

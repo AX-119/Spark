@@ -2,6 +2,7 @@
 #define TRANSFORMCOMPONENT_H
 
 #include "Component.h"
+#include "IInspectorRenderable.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -10,7 +11,7 @@
 namespace spark
 {
     class GameObject;
-    class TransformComponent final : public Component
+    class TransformComponent final : public Component, public IInspectorRenderable
     {
     public:
         explicit TransformComponent(GameObject *parent) : Component(parent) {};
@@ -37,6 +38,8 @@ namespace spark
 
         glm::mat4 CalculateLocalMatrix() const;
         void SetDirtyRecursive();
+
+        void RenderInspector() override;
 
     private:
         // Local space properties

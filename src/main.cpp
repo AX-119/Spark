@@ -11,6 +11,8 @@
 #include "Components/ScriptComponent.h"
 #include "LuaInstance.h"
 #include "SceneManager.h"
+#include "Window.h"
+#include "Renderer.h"
 
 // SDL
 void InitSDL()
@@ -18,72 +20,54 @@ void InitSDL()
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 }
 
-SDL_Window *CreateWindow()
+void QuitSDL()
 {
-    return SDL_CreateWindow("Spark", 1920, 1080, 0);
-}
-SDL_Renderer *CreateRenderer(SDL_Window *window, const char *name = nullptr)
-{
-    return SDL_CreateRenderer(window, name);
-}
-void QuitSDL(SDL_Window *window, SDL_Renderer *renderer)
-{
-    if (renderer)
-        SDL_DestroyRenderer(renderer);
-    if (window)
-        SDL_DestroyWindow(window);
     SDL_Quit();
 }
 
-void Render(SDL_Renderer *renderer, spark::SceneManager &sceneManager, spark::EditorUI &editorUI)
+void Render(spark::Renderer &renderer, spark::SceneManager &sceneManager, spark::EditorUI &editorUI)
 {
 
     editorUI.BeginFrame();
     editorUI.Render(sceneManager);
 
-    SDL_SetRenderDrawColor(renderer, 100, 149, 237, 255);
-    SDL_RenderClear(renderer);
+    renderer.SetDrawColor(100, 149, 237, 255);
+    renderer.Clear();
 
     // render game or whatever sdl has to handle here
     sceneManager.Render();
 
-    editorUI.EndFrame(renderer);
+    editorUI.EndFrame(renderer.GetSDLRenderer());
 
-    SDL_RenderPresent(renderer);
+    renderer.Present();
 }
 
 int main(int argc, char *argv[])
 {
     InitSDL();
-    auto window = CreateWindow();
-    auto renderer = CreateRenderer(window);
-
-    if (!window || !renderer)
-    {
-        std::cerr << "Failed to initialize SDL window or renderer: " << SDL_GetError() << std::endl;
-        QuitSDL(window, renderer);
-        return 1;
-    }
+    auto &window = spark::Window::GetInstance();
+    auto &renderer = spark::Renderer::GetInstance();
 
     auto &lua = spark::LuaInstance::GetInstance();
     auto &sceneManager = spark::SceneManager::GetInstance();
     lua.Init();
 
     spark::EditorUI editorUI;
-    editorUI.Init(window, renderer);
+    editorUI.Init(window.GetSDLWindow(), renderer.GetSDLRenderer());
 
     auto scene = sceneManager.GetCurrentScene();
     if (scene)
     {
         auto go = scene->EmplaceGameObject();
-        go->AddComponent<spark::TestComponent>();
-        go->AddComponent<spark::ScriptComponent>("res/test.lua")->Init();
+        go->AddComponent<spark::ScriptComponent>("res/test.lua");
 
         auto go1 = scene->EmplaceGameObject("Hello");
         auto go2 = scene->EmplaceGameObject("World");
         go2->SetParent(go1);
     }
 
+    // This is the equivalent of the "Start()" function in UNity
+    sceneManager.Init();
     // game loop
     bool running = true;
     Uint64 lastTime = SDL_GetPerformanceCounter();
@@ -95,7 +79,7 @@ int main(int argc, char *argv[])
             editorUI.ProcessEvent(&e);
             if (e.type == SDL_EVENT_QUIT)
                 running = false;
-            if (e.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && e.window.windowID == SDL_GetWindowID(window))
+            if (e.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && e.window.windowID == SDL_GetWindowID(window.GetSDLWindow()))
                 running = false;
         }
 
@@ -111,6 +95,6 @@ int main(int argc, char *argv[])
     }
 
     editorUI.Shutdown();
-    QuitSDL(window, renderer);
+    QuitSDL();
     return 0;
 }

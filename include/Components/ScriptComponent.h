@@ -1,45 +1,58 @@
-#ifndef SCRIPTCOMPONENT_H
-#define SCRIPTCOMPONENT_H
-
+#pragma once
 #include "Component.h"
+#include <sol/sol.hpp>
+#include <string>
+#include "imgui.h"
 #include "IUpdateable.h"
 #include "IRenderable.h"
+#include "IInitializable.h"
 #include "IImGuiRenderable.h"
-
-#define SOL_ALL_SAFETIES_ON 1
-#include <sol/sol.hpp>
+#include "IInspectorRenderable.h"
+#include "TextEditor.h"
 
 namespace spark
 {
-    class ScriptComponent final : public Component, public IUpdateable, public IRenderable, public IImGuiRenderable
+    class ScriptComponent : public Component, public IInitializable, public IUpdateable, public IRenderable, public IImGuiRenderable, public IInspectorRenderable
     {
     public:
-        explicit ScriptComponent(GameObject *parent, const std::string &scriptPath);
-        virtual ~ScriptComponent() = default;
+        ScriptComponent(GameObject *parent, const std::string &scriptPath);
 
-        void Init();
-
+        void Init() override;
         void Update(float dt) override;
         void Render() override;
         void RenderImGui() override;
-        void Test();
+        void RenderInspector() override;
+
         bool ReloadScript();
 
+        void AddScript();
+        bool LoadScriptContent();
+        bool SaveScriptContent();
+        void RenderScriptEditor();
+        int CountLines() const;
+
+        static int TextEditCallback(ImGuiInputTextCallbackData *data);
+
     private:
-        std::string m_scriptPath{};
+        bool LoadAndExecuteScript();
+
+    private:
+        std::string m_scriptPath;
+        std::string m_scriptContent;
         sol::environment m_scriptEnv;
 
-        bool LoadAndExecuteScript();
-        bool m_hasInitFunction{true};
-        bool m_hasUpdateFunction{true};
-        bool m_hasRenderFunction{true};
-        bool m_hasRenderImGuiFunction{true};
-
+        sol::protected_function m_luaInit;
         sol::protected_function m_luaUpdate;
         sol::protected_function m_luaRender;
         sol::protected_function m_luaImGuiRender;
-        sol::protected_function m_luaInit;
-    };
-}
 
-#endif // SCRIPTCOMPONENT_H
+        bool m_hasInitFunction = true;
+        bool m_hasUpdateFunction = true;
+        bool m_hasRenderFunction = true;
+        bool m_hasRenderImGuiFunction = true;
+
+        bool m_isEditorOpen = false;
+        bool m_hasUnsavedChanges = false;
+    };
+
+}

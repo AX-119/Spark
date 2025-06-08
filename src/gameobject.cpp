@@ -2,6 +2,7 @@
 #include "Components/TransformComponent.h"
 #include <string>
 #include "SceneManager.h"
+#include "imgui.h"
 namespace spark
 {
     GameObject::GameObject()
@@ -56,6 +57,19 @@ namespace spark
             child->RenderImGui();
         }
     }
+
+    void GameObject::RenderInspector()
+    {
+        ImGui::Text("%s: ", m_name.c_str());
+        ImGui::Separator();
+
+        // Render all inspector-renderable components
+        for (auto &ir : m_inspectorRenderables)
+        {
+            ir->RenderInspector();
+        }
+    }
+
     void GameObject::SetParent(GameObject *newParent, bool keepWorldPos)
     {
         // Check if newParent is valid

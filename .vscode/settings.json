@@ -80,6 +80,8 @@
         "span": "cpp",
         "condition_variable": "cpp",
         "numeric": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "regex": "cpp",
+        "filesystem": "cpp"
     }
 }

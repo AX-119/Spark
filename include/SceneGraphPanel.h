@@ -9,10 +9,10 @@ namespace spark
     public:
         SceneGraphPanel() = default;
         ~SceneGraphPanel() = default;
-        void Render(SceneManager &sceneManager, GameObject *selectedGameObject);
+        void Render(SceneManager &sceneManager, GameObject *&selectedGameObject);
 
     private:
-        void RenderGameObjectNode(GameObject *obj);
+        void RenderGameObjectNode(GameObject *obj, GameObject *&selectedGameObject);
     };
 }
 #endif // SCENEGRAPHPANEL_H

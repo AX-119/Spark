@@ -11,6 +11,7 @@
 #include "IUpdateable.h"
 #include "IRenderable.h"
 #include "IImGuiRenderable.h"
+#include "IInspectorRenderable.h"
 
 namespace spark
 {
@@ -33,6 +34,7 @@ namespace spark
         void Update(float dt);
         void Render();
         void RenderImGui();
+        void RenderInspector();
 
         void SetParent(GameObject *newParent, bool keepWorldPos = true);
         GameObject *GetParent() const;
@@ -72,6 +74,10 @@ namespace spark
             {
                 m_imguiRenderables.emplace_back(i);
             }
+            if (auto *ir = dynamic_cast<IInspectorRenderable *>(rawPtr))
+            {
+                m_inspectorRenderables.emplace_back(ir);
+            }
             return rawPtr;
         }
 
@@ -99,7 +105,7 @@ namespace spark
 
             if (auto *i = dynamic_cast<IInitializable *>(target))
             {
-                RemoveInterfacePtr(m_updateables, i);
+                RemoveInterfacePtr(m_initializables, i);
             }
             if (auto *u = dynamic_cast<IUpdateable *>(target))
             {
@@ -112,6 +118,10 @@ namespace spark
             if (auto *i = dynamic_cast<IImGuiRenderable *>(target))
             {
                 RemoveInterfacePtr(m_imguiRenderables, i);
+            }
+            if (auto *ir = dynamic_cast<IInspectorRenderable *>(target))
+            {
+                RemoveInterfacePtr(m_inspectorRenderables, ir);
             }
             std::erase_if(m_components, [target](const std::unique_ptr<Component> &comp)
                           { return comp.get() == target; });
@@ -129,6 +139,7 @@ namespace spark
         std::vector<IUpdateable *> m_updateables;
         std::vector<IRenderable *> m_renderables;
         std::vector<IImGuiRenderable *> m_imguiRenderables;
+        std::vector<IInspectorRenderable *> m_inspectorRenderables;
 
         TransformComponent *m_transform{};
 

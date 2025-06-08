@@ -5,7 +5,8 @@
 
 namespace spark
 {
-    EditorUI::EditorUI() : m_sceneGraphPanel{std::make_unique<SceneGraphPanel>()}
+    EditorUI::EditorUI() : m_sceneGraphPanel{std::make_unique<SceneGraphPanel>()}, m_inspectorPanel{std::make_unique<InspectorPanel>()}
+
     {
     }
 
@@ -19,6 +20,9 @@ namespace spark
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
         ImGui::StyleColorsDark();
+
+        float fontSize = 20.0f;
+        io.FontDefault = io.Fonts->AddFontFromFileTTF("res/fonts/RedHatMono-Regular.ttf", fontSize);
 
         ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
         ImGui_ImplSDLRenderer3_Init(renderer);
@@ -47,9 +51,10 @@ namespace spark
         {
             m_sceneGraphPanel->Render(sceneManager, m_selectedGameObject);
         }
-        // if (m_inspectorPanel && m_selectedGameObject) {
-        //     m_inspectorPanel->Render(m_selectedGameObject);
-        // }
+        if (m_inspectorPanel && m_selectedGameObject)
+        {
+            m_inspectorPanel->Render(sceneManager, m_selectedGameObject);
+        }
         sceneManager.ImGuiRender();
     }
     void EditorUI::EndFrame(SDL_Renderer *renderer)

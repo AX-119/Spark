@@ -1,4 +1,5 @@
 #include <Components/TransformComponent.h>
+#include <imgui.h>
 void spark::TransformComponent::SetLocalPosition(const glm::vec3 &position)
 {
     if (m_localPosition != position)
@@ -128,4 +129,35 @@ glm::vec3 spark::TransformComponent::GetWorldPosition() const
 {
     GetWorldMatrix();
     return glm::vec3(m_worldMatrix[3]);
+}
+
+void spark::TransformComponent::RenderInspector()
+{
+    if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        // Position
+        float pos[3] = {m_localPosition.x, m_localPosition.y, m_localPosition.z};
+        if (ImGui::DragFloat3("Position", pos, 0.1f))
+        {
+            SetLocalPosition(glm::vec3(pos[0], pos[1], pos[2]));
+        }
+
+        // Rotation (convert quaternion to euler angles for display)
+        glm::vec3 eulerAngles = glm::degrees(glm::eulerAngles(m_localRotation));
+        float rot[3] = {eulerAngles.x, eulerAngles.y, eulerAngles.z};
+        if (ImGui::DragFloat3("Rotation", rot, 1.0f))
+        {
+            glm::vec3 newEuler = glm::radians(glm::vec3(rot[0], rot[1], rot[2]));
+            SetLocalRotation(glm::quat(newEuler));
+        }
+
+        // Scale
+        float scale[3] = {m_localScale.x, m_localScale.y, m_localScale.z};
+        if (ImGui::DragFloat3("Scale", scale, 0.01f, 0.01f, 100.0f))
+        {
+            SetLocalScale(glm::vec3(scale[0], scale[1], scale[2]));
+        }
+
+        ImGui::Separator();
+    }
 }

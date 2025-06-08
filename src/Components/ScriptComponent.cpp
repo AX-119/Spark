@@ -1,15 +1,35 @@
 #include "Components/ScriptComponent.h"
 #include "LuaInstance.h"
+#include "imgui.h"
+#include <fstream>
+#include <sstream>
+#include <filesystem>
 namespace spark
 {
     ScriptComponent::ScriptComponent(GameObject *parent, const std::string &scriptPath) : Component(parent),
                                                                                           m_scriptPath{scriptPath},
-                                                                                          m_scriptEnv{LuaInstance::GetInstance().GetState(), sol::create, LuaInstance::GetInstance().GetState().globals()}
+                                                                                          m_scriptEnv{LuaInstance::GetInstance().GetState(), sol::create, LuaInstance::GetInstance().GetState().globals()},
+                                                                                          m_scriptContent{},
+                                                                                          m_isEditorOpen{false},
+                                                                                          m_hasUnsavedChanges{false}
     {
+        LoadScriptContent();
     }
+
     void ScriptComponent::Init()
     {
         m_scriptEnv["gameObject"] = GetParent();
+
+        m_hasInitFunction = false;
+        m_hasUpdateFunction = false;
+        m_hasRenderFunction = false;
+        m_hasRenderImGuiFunction = false;
+
+        m_luaInit = sol::nil;
+        m_luaUpdate = sol::nil;
+        m_luaRender = sol::nil;
+        m_luaImGuiRender = sol::nil;
+
         if (LoadAndExecuteScript())
         {
             m_luaInit = m_scriptEnv["Init"];
@@ -17,32 +37,144 @@ namespace spark
             m_luaRender = m_scriptEnv["Render"];
             m_luaImGuiRender = m_scriptEnv["RenderImGui"];
 
-            if (!m_luaInit.valid() || m_luaInit.get_type() != sol::type::function)
-            {
-                std::cerr << "Couldn't find \'Init()\' in lua script!\n";
-                m_hasInitFunction = false;
+            sol::object luaInitObj = m_scriptEnv["Init"];
+            if (luaInitObj.is<sol::function>())
+            { // Check if it's specifically a function
+                m_luaInit = luaInitObj.as<sol::protected_function>();
+                m_hasInitFunction = true;
             }
-            if (!m_luaUpdate.valid() || m_luaUpdate.get_type() != sol::type::function)
+            else if (luaInitObj.valid())
+            { // It exists but isn't a function
+                std::cerr << "Script '" << m_scriptPath << "': 'Init' found but is not a function.\n";
+            } // else: Not found, which can be normal. No error message needed unless debugging.
+
+            sol::object luaUpdateObj = m_scriptEnv["Update"];
+            if (luaUpdateObj.is<sol::function>())
             {
-                std::cerr << "Couldn't find \'Update()\' in lua script!\n";
-                m_hasUpdateFunction = false;
+                m_luaUpdate = luaUpdateObj.as<sol::protected_function>();
+                m_hasUpdateFunction = true;
             }
-            if (!m_luaRender.valid() || m_luaRender.get_type() != sol::type::function)
+            else if (luaUpdateObj.valid())
             {
-                std::cerr << "Couldn't find \'Render()\' in lua script!\n";
-                m_hasRenderFunction = false;
+                std::cerr << "Script '" << m_scriptPath << "': 'Update' found but is not a function.\n";
             }
-            if (!m_luaImGuiRender.valid() || m_luaImGuiRender.get_type() != sol::type::function)
+
+            sol::object luaRenderObj = m_scriptEnv["Render"];
+            if (luaRenderObj.is<sol::function>())
             {
-                std::cerr << "Couldn't find \'RenderImGui()\' in lua script!\n";
-                m_hasRenderImGuiFunction = false;
+                m_luaRender = luaRenderObj.as<sol::protected_function>();
+                m_hasRenderFunction = true;
+            }
+            else if (luaRenderObj.valid())
+            {
+                std::cerr << "Script '" << m_scriptPath << "': 'Render' found but is not a function.\n";
+            }
+
+            sol::object luaImGuiRenderObj = m_scriptEnv["RenderImGui"];
+            if (luaImGuiRenderObj.is<sol::function>())
+            {
+                m_luaImGuiRender = luaImGuiRenderObj.as<sol::protected_function>();
+                m_hasRenderImGuiFunction = true;
+            }
+            else if (luaImGuiRenderObj.valid())
+            {
+                std::cerr << "Script '" << m_scriptPath << "': 'RenderImGui' found but is not a function.\n";
             }
         }
+        else
+        {
+            // LoadAndExecuteScript failed. An error message should have been printed by it.
+            // All m_has...Function flags remain false, correctly indicating unavailability.
+            std::cerr << "ScriptComponent::Init: Due to script execution failure for '" << m_scriptPath
+                      << "', all Lua functions are marked unavailable.\n";
+        }
     }
+
+    bool ScriptComponent::LoadScriptContent()
+    {
+        if (m_scriptPath.empty())
+        {
+            std::cerr << "Failed to load script content: Script path is empty.\n";
+            m_scriptContent.clear();     // Ensure content is empty if path is invalid
+            m_hasUnsavedChanges = false; // No content, so no unsaved changes
+            return false;
+        }
+
+        std::ifstream file(m_scriptPath);
+        if (!file.is_open())
+        {
+            std::cerr << "Failed to open script file: " << m_scriptPath << "\n";
+            // Optionally, clear m_scriptContent or leave it as is if it had previous content
+            // For consistency, if file can't be opened, perhaps clear it:
+            // m_scriptContent.clear();
+            return false;
+        }
+
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        m_scriptContent = buffer.str();
+        file.close();
+
+        m_hasUnsavedChanges = false; // Content is now synced with the file
+        // std::cout << "Script content loaded from: " << m_scriptPath << "\n"; // For debugging
+        return true;
+    }
+
+    bool ScriptComponent::SaveScriptContent()
+    {
+
+        if (m_scriptPath.empty())
+        {
+            std::cerr << "ERROR: Script path is empty. Cannot save." << std::endl;
+            return false;
+        }
+
+        std::ofstream file(m_scriptPath);
+        if (!file.is_open())
+        {
+            std::cerr << "ERROR: Failed to open file for saving at '" << m_scriptPath << "'. Check path validity and permissions." << std::endl;
+            return false;
+        }
+        file << m_scriptContent; // Perform the write operation
+
+        if (file.fail())
+        {
+            std::cerr << "ERROR: stream.fail() is true after writing content to '" << m_scriptPath << "' (before close)." << std::endl;
+            file.close();
+            return false;
+        }
+
+        file.close();
+
+        if (file.fail())
+        {
+            std::cerr << "ERROR: stream.fail() is true after closing file '" << m_scriptPath << "'." << std::endl;
+            return false;
+        }
+
+        m_hasUnsavedChanges = false;
+        return true;
+    }
+
     bool ScriptComponent::LoadAndExecuteScript()
     {
         auto &lua = LuaInstance::GetInstance().GetState();
-        auto result = lua.safe_script_file(m_scriptPath, m_scriptEnv, sol::script_pass_on_error);
+
+        if (m_scriptContent.empty())
+        {
+            if (!m_scriptPath.empty())
+            {
+                // This might occur if LoadScriptContent() failed earlier or was never called appropriately.
+                std::cerr << "Warning: Script content for '" << m_scriptPath << "' is empty at execution time. "
+                          << "Ensure LoadScriptContent() was called and succeeded.\n";
+            }
+            else
+            {
+                std::cerr << "Error: No script path and script content is empty. Cannot execute.\n";
+            }
+            return false; // Cannot execute an empty script.
+        }
+        auto result = lua.safe_script(m_scriptContent, m_scriptEnv);
         if (!result.valid())
         {
             sol::error error = result;
@@ -52,27 +184,27 @@ namespace spark
         std::cerr << "Script loaded successfully! Path [ " << m_scriptPath << " ]\n";
         return true;
     }
+
     void ScriptComponent::Update(float dt)
     {
         if (!m_hasUpdateFunction)
         {
             return;
         }
-
-        auto result = m_luaUpdate();
+        auto result = m_luaUpdate(dt);
         if (!result.valid())
         {
             sol::error error = result;
             std::cerr << "Error in Lua script Update(): " << error.what() << "\n";
         }
     }
+
     void ScriptComponent::Render()
     {
         if (!m_hasRenderFunction)
         {
             return;
         }
-
         auto result = m_luaRender();
         if (!result.valid())
         {
@@ -80,6 +212,7 @@ namespace spark
             std::cerr << "Error in Lua script Render(): " << error.what() << "\n";
         }
     }
+
     void ScriptComponent::RenderImGui()
     {
         if (!m_hasRenderImGuiFunction)
@@ -93,8 +226,311 @@ namespace spark
             std::cerr << "Error in Lua script RenderImGui():" << error.what() << "\n";
         }
     }
+
+    void ScriptComponent::RenderInspector()
+    {
+        if (ImGui::CollapsingHeader("Script Component", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            // Display script path with unsaved changes indicator
+            if (m_hasUnsavedChanges)
+            {
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), "Path: %s *", m_scriptPath.c_str());
+            }
+            else
+            {
+                ImGui::Text("Path: %s", m_scriptPath.c_str());
+            }
+            ImGui::Text("Script Content Lines: %d", CountLines()); // Display line count
+
+            // Button row
+            if (ImGui::Button("Add Script"))
+            {
+                ImGui::OpenPopup("New Script##AddScript");
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Reload Script"))
+            {
+                if (m_hasUnsavedChanges)
+                {
+                    ImGui::OpenPopup("Confirm Reload Unsaved Changes##Inspector");
+                }
+                else
+                {
+                    ReloadScript();
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Edit Script"))
+            {
+                if (m_scriptPath.empty() && m_scriptContent.empty())
+                {
+                    std::cerr << "Cannot edit script: No script path specified and no content loaded." << std::endl;
+                    // Optionally show an ImGui error popup here
+                }
+                else if (m_scriptContent.empty() && !m_scriptPath.empty() && !LoadScriptContent())
+                {
+                    std::cerr << "Cannot edit script: Failed to load content from " << m_scriptPath << std::endl;
+                    // Optionally show an ImGui error popup here
+                }
+                else
+                {
+                    m_isEditorOpen = true; // Open editor only if content is available or loadable
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Save Script")) // Added Save button to Inspector
+            {
+                if (m_hasUnsavedChanges)
+                {
+                    SaveScriptContent();
+                }
+                else
+                {
+                    // Optionally notify user that there are no changes to save
+                    // ImGui::Text("No unsaved changes.");
+                }
+            }
+
+            // Unsaved changes confirmation popup for Reload Script
+            if (ImGui::BeginPopupModal("Confirm Reload Unsaved Changes##Inspector", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImGui::Text("You have unsaved changes in the editor for '%s'.", m_scriptPath.c_str());
+                ImGui::Text("Reloading from file will discard these changes.");
+                ImGui::Text("Are you sure you want to continue?");
+                ImGui::Separator();
+
+                if (ImGui::Button("Yes, Discard & Reload", ImVec2(180, 0)))
+                {
+                    // LoadScriptContent(); // This is now part of ReloadScript's start if it needs to ensure file content
+                    ReloadScript(); // ReloadScript will call LoadScriptContent then Init
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SetItemDefaultFocus();
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel", ImVec2(120, 0)))
+                {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+            ImGui::Separator();
+        }
+
+        // Script Editor Window
+        if (m_isEditorOpen)
+        {
+            RenderScriptEditor();
+        }
+        AddScript();
+    }
+
+    void ScriptComponent::RenderScriptEditor()
+    {
+        ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
+        std::string persistentId = "###ScriptEditor_" + m_scriptPath; // Or any other unique and stable string
+
+        std::string displayedTitle = "Script Editor - " + m_scriptPath;
+        if (m_hasUnsavedChanges)
+        {
+            displayedTitle += " *";
+        }
+        std::string windowIdentifier = displayedTitle + persistentId;
+        if (ImGui::Begin(windowIdentifier.c_str(), &m_isEditorOpen))
+        {
+            // Toolbar
+            if (ImGui::Button("Save"))
+            {
+                if (SaveScriptContent())
+                {
+                    // Optionally reload the script after saving
+                    // ReloadScript();
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Save & Reload"))
+            {
+                if (SaveScriptContent())
+                {
+                    ReloadScript();
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Reload from File"))
+            {
+                if (m_hasUnsavedChanges)
+                {
+                    ImGui::OpenPopup("Confirm Discard Editor Changes##EditorReload");
+                }
+                else
+                {
+                    if (LoadScriptContent())
+                    { // Reload content from file
+                      // Optionally, if you want this to also re-execute:
+                      // ReloadScript();
+                    }
+                }
+            }
+
+            ImGui::SameLine();
+            ImGui::Text("Lines: %d", CountLines());
+
+            // Keyboard shortcuts
+            if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_S, false))
+            {
+                if (SaveScriptContent())
+                {
+                    // Potentially give feedback
+                }
+            }
+
+            // Unsaved changes confirmation popup for editor
+            if (ImGui::BeginPopupModal("Confirm Discard Editor Changes##EditorReload", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImGui::Text("You have unsaved changes. Reloading from file will discard them.");
+                ImGui::Text("Are you sure you want to continue?");
+                ImGui::Separator();
+                if (ImGui::Button("Yes, Discard Changes", ImVec2(150, 0)))
+                {
+                    LoadScriptContent(); // Load from file, discarding editor changes
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SetItemDefaultFocus();
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel", ImVec2(150, 0)))
+                {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+            ImGui::Separator();
+
+            ImVec2 editorSize = ImGui::GetContentRegionAvail();
+            // Make editor slightly smaller to avoid scrollbars overlapping with window border if possible
+            editorSize.y -= ImGui::GetStyle().ScrollbarSize;
+
+            // Reserve some space if it's very small to avoid frequent reallocations at start.
+            if (m_scriptContent.capacity() < 1024)
+            {
+                m_scriptContent.reserve(1024);
+            }
+
+            // Note: ImGui::InputTextMultiline wants a non-const char*.
+            // std::string::data() (C++17+) or &m_scriptContent[0] (for non-empty strings) can provide this.
+            // Need to ensure the string's internal buffer is large enough.
+            // The TextEditCallback handles resizing m_scriptContent.
+            if (ImGui::InputTextMultiline("##ScriptEditSource",
+                                          &m_scriptContent[0],        // Pass pointer to first char
+                                          m_scriptContent.capacity(), // Pass current capacity
+                                          editorSize,
+                                          ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackResize,
+                                          TextEditCallback,
+                                          this)) // User data for callback
+            {
+                // This block is entered when the content is *changed* by the user.
+                // The TextEditCallback should have already updated m_scriptContent's size.
+                // We just need to mark that there are unsaved changes.
+                m_hasUnsavedChanges = true;
+            }
+        }
+        ImGui::End();
+    }
+
+    int ScriptComponent::TextEditCallback(ImGuiInputTextCallbackData *data)
+    {
+        if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
+        {
+            ScriptComponent *component = static_cast<ScriptComponent *>(data->UserData);
+            // Resize std::string to the new required size
+            IM_ASSERT(data->BufSize > 0);
+            component->m_scriptContent.resize(data->BufTextLen); // BufTextLen is length of text BEFORE null terminator
+            data->Buf = &component->m_scriptContent[0];          // Update ImGui's buffer pointer to our string's data
+        }
+        // Can also handle ImGuiInputTextFlags_Edited here if needed, but the return of InputTextMultiline covers it.
+        return 0;
+    }
+
+    int ScriptComponent::CountLines() const
+    {
+        return std::count(m_scriptContent.begin(), m_scriptContent.end(), '\n') + 1;
+    }
+
     bool ScriptComponent::ReloadScript()
     {
+        if (!LoadScriptContent())
+        {
+            std::cerr << "ReloadScript: Failed to load script content from file. Aborting reload.\n";
+            // All Lua functions should be marked as unavailable because the script couldn't be loaded.
+            m_hasInitFunction = false;
+            m_hasUpdateFunction = false;
+            m_hasRenderFunction = false;
+            m_hasRenderImGuiFunction = false;
+            m_luaInit = sol::nil;
+            m_luaUpdate = sol::nil;
+            m_luaRender = sol::nil;
+            m_luaImGuiRender = sol::nil;
+            return false;
+        }
+
+        // 2. Create a fresh Lua environment for the script.
+        //    This prevents state from previous runs of the script from interfering.
+        lua_State *L = LuaInstance::GetInstance().GetState();
+        m_scriptEnv = sol::environment(L, sol::create, LuaInstance::GetInstance().GetState().globals());
+
+        // 3. Call Init. This will:
+        //    - Set m_scriptEnv["gameObject"].
+        //    - Call the new LoadAndExecuteScript() which executes m_scriptContent in the new m_scriptEnv.
+        //    - Populate m_lua* function references and m_has* flags.
+        Init(); // Init now handles its flags robustly.
+        std::cout << "Script reloaded: " << m_scriptPath << std::endl;
+        // 4. Optionally, after C++ Init, call the script's own Init function if it exists.
+        //    This is a common pattern for reloaded scripts.
+        if (m_hasInitFunction && m_luaInit.valid())
+        {
+            auto result = m_luaInit(); // Call the Lua Init()
+            if (!result.valid())
+            {
+                sol::error err = result;
+                std::cerr << "Error executing Lua script's Init() function for '" << m_scriptPath << "': " << err.what() << "\n";
+                // Depending on severity, you might want to invalidate this script component or m_hasInitFunction.
+            }
+        }
+
         return true;
     }
+
+    void ScriptComponent::AddScript()
+    {
+
+        if (ImGui::BeginPopupModal("New Script##AddScript", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::Text("Name of the new script:");
+            const int nameLength = 256;
+            char name[nameLength];
+            ImGui::InputText("##scriptName", name, nameLength);
+            std::string newScriptPath = "res/scripts/" + std::string(name) + ".lua";
+
+            if (ImGui::Button("Add Script", ImVec2(150, 0)))
+            {
+                if (!std::filesystem::exists(newScriptPath))
+                {
+                    // Create the script file with a default content
+                    std::ofstream file(newScriptPath);
+
+                    file.close();
+                    ImGui::CloseCurrentPopup();
+                }
+                else
+                {
+                    // Script already exists, show an error message
+                    ImGui::Text("Error: A script with the same name already exists.");
+                }
+            }
+            ImGui::EndPopup();
+        }
+    }
+
 } // namespace spark
