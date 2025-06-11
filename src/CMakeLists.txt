@@ -1,3 +1,4 @@
+# /src
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS *.cpp)
 
 add_executable(Spark

@@ -446,4 +446,5 @@ FodyWeavers.xsd
 *.sln.iml
 
 extern/*
+!extern/CMakeLists.txt
 build
