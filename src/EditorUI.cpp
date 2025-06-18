@@ -97,28 +97,25 @@ namespace spark
 
             if (m_isPlaying)
             {
-                if (ImGui::Button("⏸", ImVec2(30, 30))) // Pause icon
+                if (ImGui::Button("⏸", ImVec2(30, 30)))
                 {
                     m_isPlaying = false;
-                    // Add pause logic here
                 }
             }
             else
             {
-                if (ImGui::Button("▶", ImVec2(30, 30))) // Play icon
+                if (ImGui::Button("▶", ImVec2(30, 30)))
                 {
                     m_isPlaying = true;
-                    // Add play logic here
                 }
             }
 
             ImGui::SameLine();
 
             // Stop button
-            if (ImGui::Button("⏹", ImVec2(30, 30))) // Stop icon
+            if (ImGui::Button("⏹", ImVec2(30, 30)))
             {
                 m_isPlaying = false;
-                // Add stop logic here
             }
 
             ImGui::PopStyleVar();
