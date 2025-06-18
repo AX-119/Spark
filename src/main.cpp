@@ -4,16 +4,27 @@
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 // move these somewhere else
 #include "EditorUI.h"
 #include "GameObject.h"
-#include "Components/TestComponent.h"
 #include "Components/ScriptComponent.h"
+#include "Components/ScriptSwitcherComponent.h"
 #include "LuaInstance.h"
 #include "SceneManager.h"
 #include "Window.h"
 #include "Renderer.h"
-#include <Components/ScriptSwitcherComponent.h>
+
+#ifdef __EMSCRIPTEN__
+static std::function<void()> g_mainLoop;
+static void EmscriptenMainLoop()
+{
+    g_mainLoop();
+}
+#endif
 
 // SDL
 void InitSDL()
@@ -28,7 +39,7 @@ void QuitSDL()
 
 void Render(spark::Renderer &renderer, spark::SceneManager &sceneManager, spark::EditorUI &editorUI)
 {
-    // Clear first
+    // Clear screen
     renderer.SetDrawColor(135, 206, 235, 255);
     renderer.Clear();
 
@@ -46,16 +57,19 @@ void Render(spark::Renderer &renderer, spark::SceneManager &sceneManager, spark:
 int main(int argc, char *argv[])
 {
     InitSDL();
+    // Singletons
     auto &window = spark::Window::GetInstance();
     auto &renderer = spark::Renderer::GetInstance();
-
     auto &lua = spark::LuaInstance::GetInstance();
     auto &sceneManager = spark::SceneManager::GetInstance();
+
     lua.Init();
 
+    // Engine owned UI
     spark::EditorUI editorUI;
     editorUI.Init(window.GetSDLWindow(), renderer.GetSDLRenderer());
 
+    // Scene setup
     auto scene = sceneManager.GetCurrentScene();
     if (scene)
     {
@@ -79,12 +93,14 @@ int main(int argc, char *argv[])
         go2->SetParent(go1);
     }
 
-    // This is the equivalent of the "Start()" function in UNity
+    // This is the equivalent of the "Start()" function in Unity
     sceneManager.Init();
+
     // game loop
     bool running = true;
     Uint64 lastTime = SDL_GetPerformanceCounter();
-    while (running)
+
+    auto mainLoopIteration = [&]()
     {
         SDL_Event e;
         while (SDL_PollEvent(&e))
@@ -107,9 +123,26 @@ int main(int argc, char *argv[])
         float dt = (currentTime - lastTime) / static_cast<float>(SDL_GetPerformanceFrequency());
         lastTime = currentTime;
         sceneManager.Update(dt);
-        // render
+
         Render(renderer, sceneManager, editorUI);
+
+#ifdef __EMSCRIPTEN__
+        if (!running)
+        {
+            emscripten_cancel_main_loop();
+        }
+#endif
+    };
+
+#ifdef __EMSCRIPTEN__
+    g_mainLoop = mainLoopIteration;
+    emscripten_set_main_loop(EmscriptenMainLoop, 0, 1);
+#else
+    while (running)
+    {
+        mainLoopIteration();
     }
+#endif
 
     editorUI.Shutdown();
     QuitSDL();
