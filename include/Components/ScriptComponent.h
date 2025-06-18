@@ -8,7 +8,6 @@
 #include "IInitializable.h"
 #include "IImGuiRenderable.h"
 #include "IInspectorRenderable.h"
-#include "TextEditor.h"
 
 namespace spark
 {
@@ -24,7 +23,24 @@ namespace spark
         void RenderInspector() override;
 
         bool ReloadScript();
+        const std::string &GetScriptPath() const { return m_scriptPath; }
+        void SetScriptPath(const std::string &scriptPath) { m_scriptPath = scriptPath; }
+        void ClearScriptContent()
+        {
+            m_scriptContent.clear();
+            m_hasUnsavedChanges = false;
 
+            // Reset all Lua function flags and references
+            m_hasInitFunction = false;
+            m_hasUpdateFunction = false;
+            m_hasRenderFunction = false;
+            m_hasRenderImGuiFunction = false;
+
+            m_luaInit = sol::nil;
+            m_luaUpdate = sol::nil;
+            m_luaRender = sol::nil;
+            m_luaImGuiRender = sol::nil;
+        }
         void AddScript();
         bool LoadScriptContent();
         bool SaveScriptContent();

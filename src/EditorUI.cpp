@@ -15,6 +15,7 @@ namespace spark
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO &io = ImGui::GetIO();
+        io.IniFilename = "res/configs/imgui.ini";
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -47,6 +48,8 @@ namespace spark
     void EditorUI::Render(SceneManager &sceneManager)
     {
         SetupDockspace();
+        RenderPlaybackControls();
+
         if (m_sceneGraphPanel)
         {
             m_sceneGraphPanel->Render(sceneManager, m_selectedGameObject);
@@ -70,4 +73,57 @@ namespace spark
         ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
         ImGui::DockSpaceOverViewport(dockspaceID, viewport, dockspaceFlags);
     }
+
+    void EditorUI::RenderPlaybackControls()
+    {
+        const ImGuiViewport *viewport = ImGui::GetMainViewport();
+        ImVec2 windowSize = ImVec2(120, 60);
+        ImVec2 windowPos = ImVec2(
+            viewport->Pos.x + (viewport->Size.x - windowSize.x) * 0.5f,
+            viewport->Pos.y + 10);
+
+        ImGui::SetNextWindowPos(windowPos);
+        ImGui::SetNextWindowSize(windowSize);
+
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize |
+                                 ImGuiWindowFlags_NoMove |
+                                 ImGuiWindowFlags_NoCollapse |
+                                 ImGuiWindowFlags_NoTitleBar |
+                                 ImGuiWindowFlags_NoDocking;
+
+        if (ImGui::Begin("Playback Controls", nullptr, flags))
+        {
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 4));
+
+            if (m_isPlaying)
+            {
+                if (ImGui::Button("⏸", ImVec2(30, 30))) // Pause icon
+                {
+                    m_isPlaying = false;
+                    // Add pause logic here
+                }
+            }
+            else
+            {
+                if (ImGui::Button("▶", ImVec2(30, 30))) // Play icon
+                {
+                    m_isPlaying = true;
+                    // Add play logic here
+                }
+            }
+
+            ImGui::SameLine();
+
+            // Stop button
+            if (ImGui::Button("⏹", ImVec2(30, 30))) // Stop icon
+            {
+                m_isPlaying = false;
+                // Add stop logic here
+            }
+
+            ImGui::PopStyleVar();
+        }
+        ImGui::End();
+    }
+
 }

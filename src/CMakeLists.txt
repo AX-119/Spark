@@ -5,6 +5,12 @@ add_executable(Spark
     ${SRC_FILES}
     ${IMGUI_SRC}
 )
+
+if(MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+    # Only for 64-bit builds with MSVC
+    target_compile_options(Spark PRIVATE /bigobj)
+endif()
+
 target_include_directories(Spark PUBLIC ../include ${IMGUI_INCLUDE_DIRS})
 target_link_libraries(Spark PRIVATE SDL3::SDL3 glm::glm lua::lua sol2)
 

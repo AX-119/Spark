@@ -7,12 +7,13 @@
 // move these somewhere else
 #include "EditorUI.h"
 #include "GameObject.h"
-#include "TestComponent.h"
+#include "Components/TestComponent.h"
 #include "Components/ScriptComponent.h"
 #include "LuaInstance.h"
 #include "SceneManager.h"
 #include "Window.h"
 #include "Renderer.h"
+#include <Components/ScriptSwitcherComponent.h>
 
 // SDL
 void InitSDL()
@@ -27,21 +28,21 @@ void QuitSDL()
 
 void Render(spark::Renderer &renderer, spark::SceneManager &sceneManager, spark::EditorUI &editorUI)
 {
-
-    editorUI.BeginFrame();
-    editorUI.Render(sceneManager);
-
-    renderer.SetDrawColor(100, 149, 237, 255);
+    // Clear first
+    renderer.SetDrawColor(135, 206, 235, 255);
     renderer.Clear();
 
-    // render game or whatever sdl has to handle here
+    // Render scene content
     sceneManager.Render();
 
+    // Render UI on top
+    editorUI.BeginFrame();
+    editorUI.Render(sceneManager);
     editorUI.EndFrame(renderer.GetSDLRenderer());
 
+    // Present final result
     renderer.Present();
 }
-
 int main(int argc, char *argv[])
 {
     InitSDL();
@@ -58,8 +59,20 @@ int main(int argc, char *argv[])
     auto scene = sceneManager.GetCurrentScene();
     if (scene)
     {
-        auto go = scene->EmplaceGameObject();
+        auto go = scene->EmplaceGameObject("ScriptRunner");
         go->AddComponent<spark::ScriptComponent>("res/test.lua");
+
+        auto scriptSwitcher = scene->EmplaceGameObject("ScriptSwitcher");
+        std::vector<std::string> availableScripts = {
+            "res/draggable_physics_sim.lua",
+            "res/gravity_simulation.lua",
+            "res/particles.lua",
+            "res/wave_painter.lua",
+            "res/flocking_boids.lua",
+            "res/orbiting_particles.lua",
+            "res/particle_fountain.lua",
+        };
+        scriptSwitcher->AddComponent<spark::ScriptSwitcherComponent>(availableScripts, go);
 
         auto go1 = scene->EmplaceGameObject("Hello");
         auto go2 = scene->EmplaceGameObject("World");
@@ -81,6 +94,10 @@ int main(int argc, char *argv[])
                 running = false;
             if (e.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && e.window.windowID == SDL_GetWindowID(window.GetSDLWindow()))
                 running = false;
+            if (e.type == SDL_EVENT_WINDOW_RESIZED && e.window.windowID == SDL_GetWindowID(window.GetSDLWindow()))
+            {
+                window.OnResize(e.window.data1, e.window.data2);
+            }
         }
 
         // input

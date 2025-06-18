@@ -455,7 +455,7 @@ namespace spark
 
     int ScriptComponent::CountLines() const
     {
-        return std::count(m_scriptContent.begin(), m_scriptContent.end(), '\n') + 1;
+        return static_cast<int>(std::count(m_scriptContent.begin(), m_scriptContent.end(), '\n') + 1);
     }
 
     bool ScriptComponent::ReloadScript()

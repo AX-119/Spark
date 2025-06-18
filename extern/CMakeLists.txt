@@ -17,15 +17,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 
-# ImGuiColorTextEdit
-FetchContent_Declare(
-    imguicolortextedit
-    GIT_REPOSITORY https://github.com/BalazsJako/ImGuiColorTextEdit.git
-    GIT_TAG        master
-)
-FetchContent_MakeAvailable(imguicolortextedit)
-
-
 # Expose variables for other CMakeLists
 set(IMGUI_SRC
     ${imgui_SOURCE_DIR}/imgui.cpp
@@ -35,7 +26,6 @@ set(IMGUI_SRC
     ${imgui_SOURCE_DIR}/imgui_demo.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer3.cpp
-    ${imguicolortextedit_SOURCE_DIR}/TextEditor.cpp
     PARENT_SCOPE
 )
 

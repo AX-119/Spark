@@ -36,6 +36,8 @@ namespace spark
         void SetTitle(const std::string &title);
         void SetWindowPosition(const int x, const int y);
 
+        void OnResize(const int newWidth, const int newHeight);
+
     private:
         friend Singleton<Window>;
         Window();
@@ -44,7 +46,7 @@ namespace spark
         std::string m_title{"Spark"};
         int m_width{1920};
         int m_height{1080};
-        SDL_WindowFlags m_flags{};
+        SDL_WindowFlags m_flags{SDL_WINDOW_RESIZABLE};
         std::unique_ptr<SDL_Window, SDLWindowDeleter> m_SDLWindow{};
     };
 

@@ -36,6 +36,8 @@ namespace spark
         if (width < 0)
             return;
         m_width = width;
+        if (m_SDLWindow != nullptr)
+            SDL_SetWindowSize(m_SDLWindow.get(), m_width, m_height);
     }
 
     void Window::SetHeight(const int height)
@@ -43,11 +45,15 @@ namespace spark
         if (height < 0)
             return;
         m_height = height;
+        if (m_SDLWindow != nullptr)
+            SDL_SetWindowSize(m_SDLWindow.get(), m_width, m_height);
     }
 
     void Window::SetTitle(const std::string &title)
     {
         m_title = title;
+        if (m_SDLWindow != nullptr)
+            SDL_SetWindowTitle(m_SDLWindow.get(), m_title.c_str());
     }
 
     void Window::SetWindowPosition(const int x, const int y)
@@ -55,4 +61,9 @@ namespace spark
         SDL_SetWindowPosition(m_SDLWindow.get(), x, y);
     }
 
+    void Window::OnResize(const int newWidth, const int newHeight)
+    {
+        m_width = newWidth;
+        m_height = newHeight;
+    }
 }

@@ -27,10 +27,12 @@ namespace spark
 
     private:
         void SetupDockspace();
+        void RenderPlaybackControls();
         std::unique_ptr<SceneGraphPanel> m_sceneGraphPanel;
         std::unique_ptr<InspectorPanel> m_inspectorPanel;
 
         GameObject *m_selectedGameObject{nullptr};
+        bool m_isPlaying{};
     };
 }
 
