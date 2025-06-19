@@ -21,6 +21,7 @@ The main selling point of Spark will be its ease of use, provided by the fact th
 * A C++20 compatible compiler (e.g., GCC, Clang, MSVC).
 * CMake (version 3.10 or higher).
 * Git.
+* [optional] Emscripten
 
 ### Building and Running
 
