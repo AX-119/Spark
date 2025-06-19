@@ -57,12 +57,12 @@ Spark utilizes the following libraries, which are fetched automatically by CMake
 ```
 .
 ├── extern/         # External dependencies fetched by CMake
-├── include/        # Header files
-│   ├── Components/ # Engine-specific components
+├── include/        
+│   ├── Components/ 
 │   └── ...
 ├── res/            # Resources (fonts, scripts, etc.)
-└── src/            # Source code
-    ├── Components/ # Implementation of components
+└── src/            
+    ├── Components/ 
     └── ...
 ```
 
@@ -75,14 +75,17 @@ The entry point of the application is in `src/main.cpp`. A default scene is crea
 You can create a new `GameObject` and add components to it like so:
 
 ```cpp
-// In a Scene class
-auto myGameObject = EmplaceGameObject("MyObject");
-myGameObject->AddComponent<MyCustomComponent>();
+auto scene = sceneManager.GetCurrentScene();
+    if (scene)
+    {
+        auto myGameObject = scene->EmplaceGameObject("MyObject");
+        myGameObject->AddComponent<MyCustomComponent>();
+    }
 ```
 
 ### Lua Scripting
 
-Lua scripts can interact with `GameObjects` and their `Components`. A typical script might have `Init`, `Update`, and `Render` functions:
+Lua scripts can interact with `GameObjects` and their `Components`. A typical script can have `Init`, `Update`, and `Render` or `RenderImGui` functions:
 
 ```lua
 -- example.lua
@@ -97,10 +100,14 @@ end
 function Render()
     -- Code to draw to the screen
 end
+function RenderImGui()
+    -- Call ImGui functions here
+end
 ```
 
 The Lua API provides access to engine features such as:
 
+* The owning `GameObject` using the `gameObject` variable
 * Getting and setting the position, rotation, and scale of a `GameObject`'s `TransformComponent`.
 * Accessing window properties like title, width, and height.
 * Drawing shapes and lines with the `Renderer`.
