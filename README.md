@@ -32,7 +32,8 @@ The main selling point of Spark will be its ease of use, provided by the fact th
 
 2.  **Configure and build with CMake:**
     ```bash
-    cmake -B build
+    mkdir build
+    cmake -B build -S .
     cmake --build build
     ```
 
