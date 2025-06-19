@@ -26,7 +26,7 @@ The main selling point of Spark will be its ease of use, provided by the fact th
 
 1.  **Clone the repository:**
     ```bash
-    git clone <repository-url>
+    git clone https://github.com/AX-119/Spark.git
     cd spark
     ```
 
