@@ -99,32 +99,44 @@ int main(int argc, char *argv[])
     // game loop
     bool running = true;
     Uint64 lastTime = SDL_GetPerformanceCounter();
+    const Uint64 frequency = SDL_GetPerformanceFrequency();
+
+    const float targetFPS = 60.0f;
+    const float targetFrameTime = 1.0f / targetFPS;
 
     auto mainLoopIteration = [&]()
     {
+        Uint64 currentTime = SDL_GetPerformanceCounter();
+        float dt = (currentTime - lastTime) / static_cast<float>(frequency);
+        lastTime = currentTime;
+
+        // cap dt
+        dt = std::min(dt, 0.05f);
+
         SDL_Event e;
         while (SDL_PollEvent(&e))
         {
             editorUI.ProcessEvent(&e);
-            if (e.type == SDL_EVENT_QUIT)
-                running = false;
-            if (e.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && e.window.windowID == SDL_GetWindowID(window.GetSDLWindow()))
-                running = false;
-            if (e.type == SDL_EVENT_WINDOW_RESIZED && e.window.windowID == SDL_GetWindowID(window.GetSDLWindow()))
+
+            switch (e.type)
             {
-                window.OnResize(e.window.data1, e.window.data2);
+            case SDL_EVENT_QUIT:
+                running = false;
+                break;
+            case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+                if (e.window.windowID == SDL_GetWindowID(window.GetSDLWindow()))
+                    running = false;
+                break;
+            case SDL_EVENT_WINDOW_RESIZED:
+                if (e.window.windowID == SDL_GetWindowID(window.GetSDLWindow()))
+                {
+                    window.OnResize(e.window.data1, e.window.data2);
+                }
+                break;
+            default:
+                break;
             }
         }
-
-        // input
-
-        // update
-        Uint64 currentTime = SDL_GetPerformanceCounter();
-        float dt = (currentTime - lastTime) / static_cast<float>(SDL_GetPerformanceFrequency());
-        lastTime = currentTime;
-        sceneManager.Update(dt);
-
-        Render(renderer, sceneManager, editorUI);
 
 #ifdef __EMSCRIPTEN__
         if (!running)
@@ -132,6 +144,13 @@ int main(int argc, char *argv[])
             emscripten_cancel_main_loop();
         }
 #endif
+
+        // input
+
+        // update
+        sceneManager.Update(dt);
+
+        Render(renderer, sceneManager, editorUI);
     };
 
 #ifdef __EMSCRIPTEN__

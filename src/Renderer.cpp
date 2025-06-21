@@ -1,5 +1,6 @@
 #include "Renderer.h"
 #include "Window.h"
+#include <iostream>
 namespace spark
 {
     Renderer::Renderer() : m_SDLRenderer{std::unique_ptr<SDL_Renderer, SDLRendererDeleter>(SDL_CreateRenderer(Window::GetInstance().GetSDLWindow(), nullptr))}
@@ -9,6 +10,27 @@ namespace spark
     SDL_Renderer *Renderer::GetSDLRenderer() const
     {
         return m_SDLRenderer.get();
+    }
+
+    void Renderer::SetVsync(bool enabled)
+    {
+        if (m_SDLRenderer)
+        {
+            SDL_SetRenderVSync(m_SDLRenderer.get(), enabled ? 1 : 0);
+        }
+    }
+
+    bool Renderer::IsVsyncEnabled() const
+    {
+        int vsync;
+        if (SDL_GetRenderVSync(m_SDLRenderer.get(), &vsync))
+        {
+            return vsync == 1;
+        }
+        else
+        {
+            std::cerr << "[Renderer]: SDL_GetRenderVSync failed!\n";
+        }
     }
 
     bool Renderer::SetRenderScale(float scaleX, float scaleY)
