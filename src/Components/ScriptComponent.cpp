@@ -39,14 +39,14 @@ namespace spark
 
             sol::object luaInitObj = m_scriptEnv["Init"];
             if (luaInitObj.is<sol::function>())
-            { // Check if it's specifically a function
+            {
                 m_luaInit = luaInitObj.as<sol::protected_function>();
                 m_hasInitFunction = true;
             }
             else if (luaInitObj.valid())
-            { // It exists but isn't a function
+            {
                 std::cerr << "Script '" << m_scriptPath << "': 'Init' found but is not a function.\n";
-            } // else: Not found, which can be normal. No error message needed unless debugging.
+            }
 
             sol::object luaUpdateObj = m_scriptEnv["Update"];
             if (luaUpdateObj.is<sol::function>())
@@ -83,8 +83,6 @@ namespace spark
         }
         else
         {
-            // LoadAndExecuteScript failed. An error message should have been printed by it.
-            // All m_has...Function flags remain false, correctly indicating unavailability.
             std::cerr << "ScriptComponent::Init: Due to script execution failure for '" << m_scriptPath
                       << "', all Lua functions are marked unavailable.\n";
         }
@@ -95,8 +93,8 @@ namespace spark
         if (m_scriptPath.empty())
         {
             std::cerr << "Failed to load script content: Script path is empty.\n";
-            m_scriptContent.clear();     // Ensure content is empty if path is invalid
-            m_hasUnsavedChanges = false; // No content, so no unsaved changes
+            m_scriptContent.clear();
+            m_hasUnsavedChanges = false;
             return false;
         }
 
@@ -104,9 +102,7 @@ namespace spark
         if (!file.is_open())
         {
             std::cerr << "Failed to open script file: " << m_scriptPath << "\n";
-            // Optionally, clear m_scriptContent or leave it as is if it had previous content
-            // For consistency, if file can't be opened, perhaps clear it:
-            // m_scriptContent.clear();
+            m_scriptContent.clear();
             return false;
         }
 
@@ -115,8 +111,7 @@ namespace spark
         m_scriptContent = buffer.str();
         file.close();
 
-        m_hasUnsavedChanges = false; // Content is now synced with the file
-        // std::cout << "Script content loaded from: " << m_scriptPath << "\n"; // For debugging
+        m_hasUnsavedChanges = false;
         return true;
     }
 
@@ -135,7 +130,7 @@ namespace spark
             std::cerr << "ERROR: Failed to open file for saving at '" << m_scriptPath << "'. Check path validity and permissions." << std::endl;
             return false;
         }
-        file << m_scriptContent; // Perform the write operation
+        file << m_scriptContent;
 
         if (file.fail())
         {
@@ -164,7 +159,6 @@ namespace spark
         {
             if (!m_scriptPath.empty())
             {
-                // This might occur if LoadScriptContent() failed earlier or was never called appropriately.
                 std::cerr << "Warning: Script content for '" << m_scriptPath << "' is empty at execution time. "
                           << "Ensure LoadScriptContent() was called and succeeded.\n";
             }
@@ -172,8 +166,9 @@ namespace spark
             {
                 std::cerr << "Error: No script path and script content is empty. Cannot execute.\n";
             }
-            return false; // Cannot execute an empty script.
+            return false;
         }
+
         auto result = lua.safe_script(m_scriptContent, m_scriptEnv);
         if (!result.valid())
         {
@@ -231,7 +226,6 @@ namespace spark
     {
         if (ImGui::CollapsingHeader("Script Component", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            // Display script path with unsaved changes indicator
             if (m_hasUnsavedChanges)
             {
                 ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), "Path: %s *", m_scriptPath.c_str());
@@ -240,7 +234,7 @@ namespace spark
             {
                 ImGui::Text("Path: %s", m_scriptPath.c_str());
             }
-            ImGui::Text("Script Content Lines: %d", CountLines()); // Display line count
+            ImGui::Text("Script Content Lines: %d", CountLines());
 
             // Button row
             if (ImGui::Button("Add Script"))
@@ -266,21 +260,19 @@ namespace spark
                 if (m_scriptPath.empty() && m_scriptContent.empty())
                 {
                     std::cerr << "Cannot edit script: No script path specified and no content loaded." << std::endl;
-                    // Optionally show an ImGui error popup here
                 }
                 else if (m_scriptContent.empty() && !m_scriptPath.empty() && !LoadScriptContent())
                 {
                     std::cerr << "Cannot edit script: Failed to load content from " << m_scriptPath << std::endl;
-                    // Optionally show an ImGui error popup here
                 }
                 else
                 {
-                    m_isEditorOpen = true; // Open editor only if content is available or loadable
+                    m_isEditorOpen = true;
                 }
             }
 
             ImGui::SameLine();
-            if (ImGui::Button("Save Script")) // Added Save button to Inspector
+            if (ImGui::Button("Save Script"))
             {
                 if (m_hasUnsavedChanges)
                 {
@@ -288,8 +280,7 @@ namespace spark
                 }
                 else
                 {
-                    // Optionally notify user that there are no changes to save
-                    // ImGui::Text("No unsaved changes.");
+                    ImGui::Text("No unsaved changes.");
                 }
             }
 
@@ -303,8 +294,7 @@ namespace spark
 
                 if (ImGui::Button("Yes, Discard & Reload", ImVec2(180, 0)))
                 {
-                    // LoadScriptContent(); // This is now part of ReloadScript's start if it needs to ensure file content
-                    ReloadScript(); // ReloadScript will call LoadScriptContent then Init
+                    ReloadScript();
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::SetItemDefaultFocus();
@@ -329,8 +319,7 @@ namespace spark
     void ScriptComponent::RenderScriptEditor()
     {
         ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
-        std::string persistentId = "###ScriptEditor_" + m_scriptPath; // Or any other unique and stable string
-
+        std::string persistentId = "###ScriptEditor_" + m_scriptPath;
         std::string displayedTitle = "Script Editor - " + m_scriptPath;
         if (m_hasUnsavedChanges)
         {
@@ -342,11 +331,7 @@ namespace spark
             // Toolbar
             if (ImGui::Button("Save"))
             {
-                if (SaveScriptContent())
-                {
-                    // Optionally reload the script after saving
-                    // ReloadScript();
-                }
+                SaveScriptContent();
             }
 
             ImGui::SameLine();
@@ -368,9 +353,8 @@ namespace spark
                 else
                 {
                     if (LoadScriptContent())
-                    { // Reload content from file
-                      // Optionally, if you want this to also re-execute:
-                      // ReloadScript();
+                    {
+                        ReloadScript();
                     }
                 }
             }
@@ -409,7 +393,6 @@ namespace spark
             ImGui::Separator();
 
             ImVec2 editorSize = ImGui::GetContentRegionAvail();
-            // Make editor slightly smaller to avoid scrollbars overlapping with window border if possible
             editorSize.y -= ImGui::GetStyle().ScrollbarSize;
 
             // Reserve some space if it's very small to avoid frequent reallocations at start.
@@ -423,8 +406,8 @@ namespace spark
             // Need to ensure the string's internal buffer is large enough.
             // The TextEditCallback handles resizing m_scriptContent.
             if (ImGui::InputTextMultiline("##ScriptEditSource",
-                                          &m_scriptContent[0],        // Pass pointer to first char
-                                          m_scriptContent.capacity(), // Pass current capacity
+                                          m_scriptContent.data(),
+                                          m_scriptContent.capacity(),
                                           editorSize,
                                           ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackResize,
                                           TextEditCallback,
@@ -463,7 +446,6 @@ namespace spark
         if (!LoadScriptContent())
         {
             std::cerr << "ReloadScript: Failed to load script content from file. Aborting reload.\n";
-            // All Lua functions should be marked as unavailable because the script couldn't be loaded.
             m_hasInitFunction = false;
             m_hasUpdateFunction = false;
             m_hasRenderFunction = false;
@@ -475,27 +457,19 @@ namespace spark
             return false;
         }
 
-        // 2. Create a fresh Lua environment for the script.
-        //    This prevents state from previous runs of the script from interfering.
         lua_State *L = LuaInstance::GetInstance().GetState();
         m_scriptEnv = sol::environment(L, sol::create, LuaInstance::GetInstance().GetState().globals());
 
-        // 3. Call Init. This will:
-        //    - Set m_scriptEnv["gameObject"].
-        //    - Call the new LoadAndExecuteScript() which executes m_scriptContent in the new m_scriptEnv.
-        //    - Populate m_lua* function references and m_has* flags.
-        Init(); // Init now handles its flags robustly.
+        Init();
         std::cout << "Script reloaded: " << m_scriptPath << std::endl;
-        // 4. Optionally, after C++ Init, call the script's own Init function if it exists.
-        //    This is a common pattern for reloaded scripts.
+
         if (m_hasInitFunction && m_luaInit.valid())
         {
-            auto result = m_luaInit(); // Call the Lua Init()
+            auto result = m_luaInit();
             if (!result.valid())
             {
                 sol::error err = result;
                 std::cerr << "Error executing Lua script's Init() function for '" << m_scriptPath << "': " << err.what() << "\n";
-                // Depending on severity, you might want to invalidate this script component or m_hasInitFunction.
             }
         }
 
@@ -517,7 +491,6 @@ namespace spark
             {
                 if (!std::filesystem::exists(newScriptPath))
                 {
-                    // Create the script file with a default content
                     std::ofstream file(newScriptPath);
 
                     file.close();
@@ -525,7 +498,6 @@ namespace spark
                 }
                 else
                 {
-                    // Script already exists, show an error message
                     ImGui::Text("Error: A script with the same name already exists.");
                 }
             }
