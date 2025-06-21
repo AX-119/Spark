@@ -12,7 +12,7 @@ namespace spark
         return m_SDLRenderer.get();
     }
 
-    void Renderer::SetVsync(bool enabled)
+    void Renderer::SetVSync(bool enabled)
     {
         if (m_SDLRenderer)
         {
@@ -20,7 +20,7 @@ namespace spark
         }
     }
 
-    bool Renderer::IsVsyncEnabled() const
+    bool Renderer::IsVSyncEnabled() const
     {
         int vsync;
         if (SDL_GetRenderVSync(m_SDLRenderer.get(), &vsync))

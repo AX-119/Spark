@@ -63,6 +63,7 @@ int main(int argc, char *argv[])
     auto &lua = spark::LuaInstance::GetInstance();
     auto &sceneManager = spark::SceneManager::GetInstance();
 
+    renderer.SetVSync(true);
     lua.Init();
 
     // Engine owned UI
@@ -151,6 +152,21 @@ int main(int argc, char *argv[])
         sceneManager.Update(dt);
 
         Render(renderer, sceneManager, editorUI);
+
+#ifndef __EMSCRIPTEN__
+        // Only limit framerate if not using vsync
+        bool useFrameRateLimit = false; // Set this based on your needs
+        if (!renderer.IsVSyncEnabled() && useFrameRateLimit)
+        {
+            Uint64 frameEndTime = SDL_GetPerformanceCounter();
+            float frameTime = (frameEndTime - currentTime) / static_cast<float>(frequency);
+            if (frameTime < targetFrameTime)
+            {
+                float sleepTime = std::max(0.0f, (targetFrameTime - frameTime) * 1000.0f);
+                SDL_Delay(static_cast<Uint32>(sleepTime));
+            }
+        }
+#endif
     };
 
 #ifdef __EMSCRIPTEN__

@@ -22,8 +22,8 @@ namespace spark
         ~Renderer() = default;
         SDL_Renderer *GetSDLRenderer() const;
 
-        void SetVsync(bool enabled);
-        bool IsVsyncEnabled() const;
+        void SetVSync(bool enabled);
+        bool IsVSyncEnabled() const;
 
         bool SetRenderScale(float scaleX, float scaleY);
         bool GetRenderScale(float *scaleX, float *scaleY);
