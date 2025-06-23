@@ -30,6 +30,7 @@ namespace spark
         else
         {
             std::cerr << "[Renderer]: SDL_GetRenderVSync failed!\n";
+            return false;
         }
     }
 

@@ -1,0 +1,67 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "native",
+            "displayName": "Native (Release)",
+            "description": "Native release build",
+            "binaryDir": "${sourceDir}/builds/native/release",
+            "cacheVariables": {
+                "BUILD_TARGET": "native",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "native-debug",
+            "displayName": "Native (Debug)",
+            "description": "Native debug build",
+            "binaryDir": "${sourceDir}/builds/native/debug",
+            "cacheVariables": {
+                "BUILD_TARGET": "native",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "web-debug",
+            "displayName": "Web (Debug)",
+            "description": "Web debug build using Emscripten",
+            "binaryDir": "${sourceDir}/builds/web/debug",
+            "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "BUILD_TARGET": "web",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "web-release",
+            "displayName": "Web (Release)",
+            "description": "Web release build using Emscripten",
+            "binaryDir": "${sourceDir}/builds/web/release",
+            "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "BUILD_TARGET": "web",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "native",
+            "configurePreset": "native"
+        },
+        {
+            "name": "native-debug",
+            "configurePreset": "native-debug"
+        },
+        {
+            "name": "web-debug",
+            "configurePreset": "web-debug"
+        },
+        {
+            "name": "web-release",
+            "configurePreset": "web-release"
+        }
+    ]
+}

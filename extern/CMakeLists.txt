@@ -32,7 +32,6 @@ set(IMGUI_SRC
 set(IMGUI_INCLUDE_DIRS
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
-    ${imguicolortextedit_SOURCE_DIR}
     PARENT_SCOPE
 )
 
