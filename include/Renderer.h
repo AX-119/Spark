@@ -57,7 +57,7 @@ namespace spark
 
     private:
         std::unique_ptr<SDL_Renderer, SDLRendererDeleter> m_SDLRenderer;
-    };
+        };
 
 } // namespace spark
 

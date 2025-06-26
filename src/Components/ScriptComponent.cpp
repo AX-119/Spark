@@ -4,6 +4,12 @@
 #include <fstream>
 #include <sstream>
 #include <filesystem>
+
+#ifdef __EMSCRIPTEN__
+#include "emscripten_browser_clipboard.h"
+#include "EditorUI.h"
+#endif
+
 namespace spark
 {
     ScriptComponent::ScriptComponent(GameObject *parent, const std::string &scriptPath) : Component(parent),
@@ -358,7 +364,25 @@ namespace spark
                     }
                 }
             }
-
+            ImGui::SameLine();
+            if (ImGui::Button("Copy"))
+            {
+                if (!m_selectedText.empty())
+                {
+                    std::cout << "SetClipboardText: " << m_selectedText << "\n";
+#ifndef __EMSCRIPTEN__
+                    ImGui::SetClipboardText(m_selectedText.c_str());
+#else
+                    SetClipboardFromImGui(nullptr, m_selectedText.c_str());
+#endif
+                }
+            }
+            bool textEditFocused = false;
+            ImGui::SameLine();
+            if (ImGui::Button("Paste"))
+            {
+                m_requestedPaste = true;
+            }
             ImGui::SameLine();
             ImGui::Text("Lines: %d", CountLines());
 
@@ -370,6 +394,12 @@ namespace spark
                     // Potentially give feedback
                 }
             }
+#ifdef __EMSCRIPTEN__
+            if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_C, false))
+            {
+                SetClipboardFromImGui(nullptr, m_selectedText.c_str());
+            }
+#endif
 
             // Unsaved changes confirmation popup for editor
             if (ImGui::BeginPopupModal("Confirm Discard Editor Changes##EditorReload", NULL, ImGuiWindowFlags_AlwaysAutoResize))
@@ -409,7 +439,7 @@ namespace spark
                                           m_scriptContent.data(),
                                           m_scriptContent.capacity(),
                                           editorSize,
-                                          ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackResize,
+                                          ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackResize | ImGuiInputTextFlags_CallbackAlways,
                                           TextEditCallback,
                                           this)) // User data for callback
             {
@@ -418,19 +448,54 @@ namespace spark
                 // We just need to mark that there are unsaved changes.
                 m_hasUnsavedChanges = true;
             }
+            if (m_requestedPaste)
+            {
+                m_requestedPaste = false;
+                const char *clipboardText = ImGui::GetClipboardText();
+                if (clipboardText && clipboardText[0] != '\0')
+                {
+                    // Insert at current cursor position
+                    m_scriptContent.insert(m_cursorPos, clipboardText);
+
+                    // Update cursor position
+                    m_cursorPos += strlen(clipboardText);
+
+                    // Mark as edited
+                    m_hasUnsavedChanges = true;
+                }
+            }
+            ImGui::End();
         }
-        ImGui::End();
     }
 
     int ScriptComponent::TextEditCallback(ImGuiInputTextCallbackData *data)
     {
+        ScriptComponent *component = static_cast<ScriptComponent *>(data->UserData);
         if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
         {
-            ScriptComponent *component = static_cast<ScriptComponent *>(data->UserData);
             // Resize std::string to the new required size
             IM_ASSERT(data->BufSize > 0);
             component->m_scriptContent.resize(data->BufTextLen); // BufTextLen is length of text BEFORE null terminator
             data->Buf = &component->m_scriptContent[0];          // Update ImGui's buffer pointer to our string's data
+        }
+        else if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways)
+        {
+            // Track selection for copy/paste
+            if (data->SelectionStart != data->SelectionEnd)
+            {
+                int start = data->SelectionStart;
+                int end = data->SelectionEnd;
+                if (start > end)
+                    std::swap(start, end);
+
+                component->m_selectedText = std::string(data->Buf + start, end - start);
+            }
+            else
+            {
+                component->m_selectedText.clear();
+            }
+
+            component->m_cursorPos = data->CursorPos;
         }
         // Can also handle ImGuiInputTextFlags_Edited here if needed, but the return of InputTextMultiline covers it.
         return 0;
@@ -478,31 +543,147 @@ namespace spark
 
     void ScriptComponent::AddScript()
     {
+        static char scriptName[256] = "";
+        static std::string errorMessage = "";
+        static bool showError = false;
 
         if (ImGui::BeginPopupModal("New Script##AddScript", NULL, ImGuiWindowFlags_AlwaysAutoResize))
         {
-            ImGui::Text("Name of the new script:");
-            const int nameLength = 256;
-            char name[nameLength];
-            ImGui::InputText("##scriptName", name, nameLength);
-            std::string newScriptPath = "res/scripts/" + std::string(name) + ".lua";
+            ImGui::Text("Create a new Lua script:");
+            ImGui::Separator();
 
-            if (ImGui::Button("Add Script", ImVec2(150, 0)))
+            ImGui::Text("Script name:");
+            ImGui::InputText("##scriptName", scriptName, sizeof(scriptName));
+
+            // Show current path preview
+            if (strlen(scriptName) > 0)
             {
-                if (!std::filesystem::exists(newScriptPath))
-                {
-                    std::ofstream file(newScriptPath);
+                std::string previewPath = "res/scripts/" + std::string(scriptName) + ".lua";
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Path: %s", previewPath.c_str());
+            }
 
-                    file.close();
-                    ImGui::CloseCurrentPopup();
+            // Show error message if any
+            if (showError)
+            {
+                ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "%s", errorMessage.c_str());
+            }
+
+            ImGui::Separator();
+
+            // Buttons
+            bool canCreate = strlen(scriptName) > 0;
+            if (!canCreate)
+            {
+                ImGui::BeginDisabled();
+            }
+
+            if (ImGui::Button("Create Script", ImVec2(120, 0)))
+            {
+                std::string newScriptPath = "res/scripts/" + std::string(scriptName) + ".lua";
+
+                // Check if script already exists
+                if (std::filesystem::exists(newScriptPath))
+                {
+                    errorMessage = "Error: A script with this name already exists.";
+                    showError = true;
                 }
                 else
                 {
-                    ImGui::Text("Error: A script with the same name already exists.");
+                    // Ensure the scripts directory exists
+                    std::filesystem::create_directories("res/scripts");
+
+                    // Create the new script file with basic template
+                    std::ofstream file(newScriptPath);
+                    if (file.is_open())
+                    {
+                        // Write a basic Lua script template
+                        file << "-- " << scriptName << ".lua\n";
+                        file << "-- Generated script file\n\n";
+                        file << "function Init()\n";
+                        file << "    -- Initialize your script here\n";
+                        file << "    print(\"" << scriptName << " initialized\")\n";
+                        file << "end\n\n";
+                        file << "function Update(dt)\n";
+                        file << "    -- Update logic here (dt = delta time)\n";
+                        file << "end\n\n";
+                        file << "function Render()\n";
+                        file << "    -- Render logic here\n";
+                        file << "end\n\n";
+                        file << "function RenderImGui()\n";
+                        file << "    -- ImGui rendering here\n";
+                        file << "end\n";
+
+                        file.close();
+
+                        // Update this component to use the new script
+                        m_scriptPath = newScriptPath;
+
+                        // Load and initialize the new script
+                        if (LoadScriptContent())
+                        {
+                            Init(); // Reinitialize with new script
+                            std::cout << "New script created and loaded: " << newScriptPath << std::endl;
+                        }
+                        else
+                        {
+                            std::cerr << "Failed to load newly created script: " << newScriptPath << std::endl;
+                        }
+
+                        // Reset state and close popup
+                        memset(scriptName, 0, sizeof(scriptName));
+                        showError = false;
+                        errorMessage.clear();
+                        ImGui::CloseCurrentPopup();
+                    }
+                    else
+                    {
+                        errorMessage = "Error: Failed to create script file. Check permissions.";
+                        showError = true;
+                    }
                 }
             }
+
+            if (!canCreate)
+            {
+                ImGui::EndDisabled();
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0)))
+            {
+                // Reset state and close popup
+                memset(scriptName, 0, sizeof(scriptName));
+                showError = false;
+                errorMessage.clear();
+                ImGui::CloseCurrentPopup();
+            }
+
+            // Clear error when user starts typing
+            if (ImGui::IsItemActive() || ImGui::IsItemEdited())
+            {
+                showError = false;
+                errorMessage.clear();
+            }
+
             ImGui::EndPopup();
         }
+    }
+
+    void ScriptComponent::ClearScriptContent()
+    {
+        m_scriptContent.clear();
+        m_hasUnsavedChanges = false;
+
+        // Reset all Lua function flags and references
+        m_hasInitFunction = false;
+        m_hasUpdateFunction = false;
+        m_hasRenderFunction = false;
+        m_hasRenderImGuiFunction = false;
+
+        m_luaInit = sol::nil;
+        m_luaUpdate = sol::nil;
+        m_luaRender = sol::nil;
+        m_luaImGuiRender = sol::nil;
     }
 
 } // namespace spark

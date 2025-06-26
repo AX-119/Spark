@@ -35,6 +35,23 @@ set(IMGUI_INCLUDE_DIRS
     PARENT_SCOPE
 )
 
+# Emscripten Browser Clipboard
+FetchContent_Declare(
+    EBC
+    GIT_REPOSITORY https://github.com/Armchair-Software/emscripten-browser-clipboard.git
+    GIT_TAG main
+)
+FetchContent_MakeAvailable(EBC)
+
+# Explicitly get the properties
+FetchContent_GetProperties(EBC)
+if(NOT ebc_POPULATED)
+    message(FATAL_ERROR "EBC was not populated correctly")
+endif()
+
+message(STATUS "EBC source dir: ${ebc_SOURCE_DIR}")
+set(EBC_INCLUDE_DIRS ${ebc_SOURCE_DIR} PARENT_SCOPE)
+
 FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git

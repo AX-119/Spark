@@ -6,7 +6,12 @@
 #include <memory>
 #include "SceneGraphPanel.h"
 #include "InspectorPanel.h"
+#include <string>
+#include <iostream>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten_browser_clipboard.h>
+#endif
 namespace spark
 {
     class SceneManager;
@@ -34,6 +39,12 @@ namespace spark
         GameObject *m_selectedGameObject{nullptr};
         bool m_isPlaying{};
     };
+
+#ifdef __EMSCRIPTEN__
+    extern std::string g_clipboardContent;
+    char const *GetClipboardForImGui(void *userData [[maybe_unused]]);
+    void SetClipboardFromImGui(void *userData [[maybe_unused]], char const *text);
+#endif
 }
 
 #endif // EDITORUI_H

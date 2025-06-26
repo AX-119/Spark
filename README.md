@@ -115,6 +115,15 @@ The Lua API provides access to engine features such as:
 * Drawing shapes and lines with the `Renderer`.
 * Getting mouse input.
 
+## ‼️ Important
+The latest Sol2 version at the time of writing is v3.3.0, which is what Spark currently fetches as a dependency. 
+
+This version has a small bug that got fixed in later commits, but if you try to compile using Emscripten out of the box you will probably get an error saying something along the lines of `error: no member named 'construct' in 'optional<T &>'`. 
+
+To fix this, you need to update a couple of lines in `sol3-src/include/optional_implementation.hpp`. 
+
+See: [Emscripten fix](https://github.com/ThePhD/sol2/commit/d805d027e0a0a7222e936926139f06e23828ce9f)
+
 ## 🤝 Contributing
 
 This project is a work in progress, and contributions are welcome. Please feel free to fork the repository, make changes, and submit a pull request.

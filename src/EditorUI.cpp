@@ -2,9 +2,14 @@
 #include "SceneManager.h"
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten_browser_clipboard.h>
+#endif
+#include <iostream>
 
 namespace spark
 {
+
     EditorUI::EditorUI() : m_sceneGraphPanel{std::make_unique<SceneGraphPanel>()}, m_inspectorPanel{std::make_unique<InspectorPanel>()}
 
     {
@@ -27,6 +32,28 @@ namespace spark
 
         ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
         ImGui_ImplSDLRenderer3_Init(renderer);
+
+#ifdef __EMSCRIPTEN__
+        std::cout << "Cout works!\n";
+        emscripten_browser_clipboard::paste([](std::string &&paste_data, void *callback_data [[maybe_unused]])
+                                            {
+                                                std::cout << "Browser pasted: " << paste_data << "\n";
+                                                g_clipboardContent = std::move(paste_data); });
+
+        io.GetClipboardTextFn = GetClipboardForImGui;
+        io.SetClipboardTextFn = SetClipboardFromImGui;
+
+        std::cout << "Testing clipboard functions directly:" << std::endl;
+        if (io.SetClipboardTextFn)
+        {
+            io.SetClipboardTextFn(nullptr, "test_direct_call");
+        }
+        if (io.GetClipboardTextFn)
+        {
+            const char *result = io.GetClipboardTextFn(nullptr);
+            std::cout << "Direct get result: " << (result ? result : "null") << std::endl;
+        }
+#endif
     }
 
     void EditorUI::Shutdown()
@@ -123,4 +150,16 @@ namespace spark
         ImGui::End();
     }
 
+    std::string g_clipboardContent{};
+    char const *GetClipboardForImGui(void *userData [[maybe_unused]])
+    {
+        std::cout << "GetClipboardForImGui called" << std::endl;
+        return g_clipboardContent.c_str();
+    }
+    void SetClipboardFromImGui(void *userData [[maybe_unused]], char const *text)
+    {
+        std::cout << "Setting clipboard from ImGui: " << text << "\n";
+        g_clipboardContent = text;
+        emscripten_browser_clipboard::copy(g_clipboardContent);
+    }
 }

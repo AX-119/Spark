@@ -25,26 +25,18 @@ namespace spark
         bool ReloadScript();
         const std::string &GetScriptPath() const { return m_scriptPath; }
         void SetScriptPath(const std::string &scriptPath) { m_scriptPath = scriptPath; }
-        void ClearScriptContent()
-        {
-            m_scriptContent.clear();
-            m_hasUnsavedChanges = false;
-
-            // Reset all Lua function flags and references
-            m_hasInitFunction = false;
-            m_hasUpdateFunction = false;
-            m_hasRenderFunction = false;
-            m_hasRenderImGuiFunction = false;
-
-            m_luaInit = sol::nil;
-            m_luaUpdate = sol::nil;
-            m_luaRender = sol::nil;
-            m_luaImGuiRender = sol::nil;
-        }
+        void ClearScriptContent();
         void AddScript();
         bool LoadScriptContent();
         bool SaveScriptContent();
         void RenderScriptEditor();
+        void RenderToolbar();
+        void HandleKeyboardShortcuts();
+        void RenderConfirmationPopups();
+        void RenderTextEditor();
+        void MarkAsModified();
+        void RenderFindReplace();
+        void HandlePasteOperation();
         int CountLines() const;
 
         static int TextEditCallback(ImGuiInputTextCallbackData *data);
@@ -55,7 +47,10 @@ namespace spark
     private:
         std::string m_scriptPath;
         std::string m_scriptContent;
+        std::string m_selectedText;
         sol::environment m_scriptEnv;
+        bool m_requestedPaste = false;
+        int m_cursorPos{};
 
         sol::protected_function m_luaInit;
         sol::protected_function m_luaUpdate;
@@ -69,6 +64,33 @@ namespace spark
 
         bool m_isEditorOpen = false;
         bool m_hasUnsavedChanges = false;
+
+        struct
+        {
+            bool save = false;
+            bool copy = false;
+            bool paste = false;
+            bool undo = false;
+            bool redo = false;
+        } m_shortcuts;
+
+        bool m_showFindReplace = false;
+        bool m_focusFindInput = false;
+        bool m_matchCase = false;
+        bool m_wholeWord = false;
+        char m_findText[256] = "";
+        char m_replaceText[256] = "";
+
+        // bool CanUndo();
+        // bool CanRedo();
+        // void Undo();
+        // void Redo();
+        // void PushUndoState();
+        // void FindNext();
+        // void FindPrevious();
+        // void Replace();
+        // void ReplaceAll();
+        // std::string GetLineEndingString();
     };
 
 }

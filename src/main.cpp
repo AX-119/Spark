@@ -43,11 +43,10 @@ void Render(spark::Renderer &renderer, spark::SceneManager &sceneManager, spark:
     renderer.SetDrawColor(135, 206, 235, 255);
     renderer.Clear();
 
+    editorUI.BeginFrame();
     // Render scene content
     sceneManager.Render();
-
     // Render UI on top
-    editorUI.BeginFrame();
     editorUI.Render(sceneManager);
     editorUI.EndFrame(renderer.GetSDLRenderer());
 

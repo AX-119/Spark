@@ -6,7 +6,16 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Emscripten-Generated Code</title>
     <style>
-        /* Enhanced canvas selection prevention with responsive sizing */
+        /* Dark theme base */
+        body {
+            background-color: #1a1a1a !important;
+            color: #e0e0e0 !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Enhanced canvas selection prevention with fixed sizing */
         canvas,
         canvas.emscripten {
             user-select: none !important;
@@ -18,19 +27,16 @@
             outline: none !important;
 
             /* Canvas styling - merged from the duplicate rule */
-            border: 0px none !important;
-            background-color: black !important;
-
-            /* Responsive sizing - override inline styles */
-            max-width: 95vw !important;
-            max-height: 85vh !important;
-            width: auto !important;
-            height: auto !important;
-            object-fit: contain !important;
-
+            border: 2px solid #333 !important;
+            background-color: #000 !important;
+            border-radius: 8px;
             /* Center the canvas */
             display: block !important;
             margin: 0 auto !important;
+
+            /* Default dimensions - prevents invisible canvas */
+            width: 1280px !important;
+            height: 720px !important;
         }
 
         /* Prevent selection when in fullscreen */
@@ -60,6 +66,8 @@
             width: 100vw !important;
             height: 100vh !important;
             object-fit: fill;
+            border: none !important;
+            border-radius: 0 !important;
         }
 
         .emscripten {
@@ -67,21 +75,42 @@
             margin-left: auto;
             margin-right: auto;
             display: block;
+            color: #e0e0e0;
         }
 
         textarea.emscripten {
-            font-family: monospace;
+            font-family: 'Courier New', monospace;
             width: 80%;
+            background-color: #2d2d2d;
+            color: #e0e0e0;
+            border: 2px solid #444;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 14px;
+            line-height: 1.4;
+            resize: vertical;
+        }
+
+        textarea.emscripten:focus {
+            outline: none;
+            border-color: #007acc;
+            box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
         }
 
         div.emscripten {
             text-align: center;
+            margin: 10px 0;
         }
 
         div.emscripten_border {
-            border: 1px solid black;
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 10px;
+            background-color: #262626;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
+        /* Dark themed spinner */
         .spinner {
             height: 50px;
             width: 50px;
@@ -90,12 +119,12 @@
             -moz-animation: rotation .8s linear infinite;
             -o-animation: rotation .8s linear infinite;
             animation: rotation 0.8s linear infinite;
-            border-left: 10px solid rgb(0, 150, 240);
-            border-right: 10px solid rgb(0, 150, 240);
-            border-bottom: 10px solid rgb(0, 150, 240);
-            border-top: 10px solid rgb(100, 0, 200);
+            border-left: 10px solid #007acc;
+            border-right: 10px solid #007acc;
+            border-bottom: 10px solid #007acc;
+            border-top: 10px solid #0099ff;
             border-radius: 100%;
-            background-color: rgb(200, 100, 250);
+            background-color: #004080;
         }
 
         @-webkit-keyframes rotation {
@@ -138,13 +167,148 @@
             }
         }
 
+        /* Dark themed progress bar */
+        progress {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 300px;
+            height: 20px;
+            border-radius: 10px;
+            border: none;
+            background-color: #333;
+            overflow: hidden;
+        }
+
+        progress::-webkit-progress-bar {
+            background-color: #333;
+            border-radius: 10px;
+        }
+
+        progress::-webkit-progress-value {
+            background: linear-gradient(90deg, #007acc, #0099ff);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        progress::-moz-progress-bar {
+            background: linear-gradient(90deg, #007acc, #0099ff);
+            border-radius: 10px;
+        }
+
+        /* Dark themed inputs and buttons */
+        input[type="checkbox"] {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #555;
+            border-radius: 3px;
+            background-color: #2d2d2d;
+            position: relative;
+            cursor: pointer;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        input[type="checkbox"]:checked {
+            background-color: #007acc;
+            border-color: #007acc;
+        }
+
+        input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            top: -2px;
+            left: 2px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        input[type="button"] {
+            background: linear-gradient(135deg, #007acc, #0099ff);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="button"]:hover {
+            background: linear-gradient(135deg, #0099ff, #007acc);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type="button"]:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Dark themed horizontal rules */
+        hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #444, transparent);
+            margin: 20px 0;
+        }
+
+        /* Status text styling */
+        #status {
+            font-size: 16px;
+            font-weight: 500;
+            color: #007acc;
+            margin: 15px 0;
+        }
+
+        /* Spinner container styling */
+        figure {
+            margin: 20px 0;
+        }
+
+        figure center {
+            color: #007acc;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Control labels */
+        label,
+        .emscripten {
+            font-size: 14px;
+            color: #e0e0e0;
+        }
+
         /* Mobile adjustments */
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
 
             canvas,
             canvas.emscripten {
-                max-width: 98vw !important;
-                max-height: 70vh !important;
+                width: 95vw !important;
+                height: calc(95vw * 0.75) !important;
+                max-height: 60vh !important;
+            }
+
+            textarea.emscripten {
+                width: 95%;
+                font-size: 12px;
+            }
+
+            progress {
+                width: 250px;
+            }
+
+            input[type="button"] {
+                padding: 8px 16px;
+                font-size: 13px;
             }
         }
 
@@ -153,19 +317,40 @@
 
             canvas,
             canvas.emscripten {
+                width: 700px !important;
+                height: 525px !important;
                 max-width: 90vw !important;
-                max-height: 80vh !important;
+                max-height: 65vh !important;
             }
         }
 
-        /* Large screen adjustments */
-        @media (min-width: 1920px) {
+        /* Small desktop adjustments */
+        @media (min-width: 1025px) and (max-width: 1199px) {
 
             canvas,
             canvas.emscripten {
-                max-width: 1920px !important;
-                max-height: 1080px !important;
+                width: 750px !important;
+                height: 562px !important;
             }
+        }
+
+        /* Scrollbar styling for webkit browsers */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #2d2d2d;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
         }
     </style>
 </head>
@@ -201,31 +386,74 @@
         var progressElement = document.getElementById('progress');
         var spinnerElement = document.getElementById('spinner');
         var canvasElement = document.getElementById('canvas');
-        canvasElement.removeAttribute('width');
-        canvasElement.removeAttribute('height');
         var outputElement = document.getElementById('output');
         if (outputElement) outputElement.value = ''; // clear browser cache
 
-        // Force canvas responsive behavior
-        function makeCanvasResponsive() {
+        // Set initial canvas size immediately
+        function setInitialCanvasSize() {
             const canvas = document.getElementById('canvas');
-            if (canvas) {
-                // Remove inline cursor style that might interfere
-                canvas.style.cursor = 'default';
+            if (!canvas) return;
 
-                // Force responsive sizing
-                canvas.style.maxWidth = '95vw';
-                canvas.style.maxHeight = '85vh';
-                canvas.style.objectFit = 'contain';
-                canvas.style.display = 'block';
-                canvas.style.margin = '0 auto';
+            // Set default size that works reliably
+            const defaultWidth = 1280;
+            const defaultHeight = 720;
+            const dpr = window.devicePixelRatio || 1;
+
+            // Set CSS display size
+            canvas.style.width = `${defaultWidth}px`;
+            canvas.style.height = `${defaultHeight}px`;
+
+            // Set actual canvas resolution
+            canvas.width = Math.round(defaultWidth * dpr);
+            canvas.height = Math.round(defaultHeight * dpr);
+        }
+
+        // Enhanced canvas sizing with proper fallbacks
+        function setCanvasSize() {
+            const canvas = document.getElementById('canvas');
+            if (!canvas || document.fullscreenElement) return;
+
+            const dpr = window.devicePixelRatio || 1;
+
+            // Use media queries for responsive sizing
+            let displayWidth, displayHeight;
+
+            if (window.matchMedia('(max-width: 768px)').matches) {
+                // Mobile
+                displayWidth = Math.min(window.innerWidth * 0.95, 400);
+                displayHeight = Math.round(displayWidth * 0.75);
+            } else if (window.matchMedia('(max-width: 1024px)').matches) {
+                // Tablet
+                displayWidth = 960;
+                displayHeight = 550;
+            } else if (window.matchMedia('(max-width: 1199px)').matches) {
+                // Small desktop
+                displayWidth = 1024;
+                displayHeight = 576;
+            } else {
+                // Large desktop - default
+                displayWidth = 1280;
+                displayHeight = 720;
+            }
+
+            // Apply CSS size (visual)
+            canvas.style.width = `${displayWidth}px`;
+            canvas.style.height = `${displayHeight}px`;
+
+            // Set actual drawing resolution
+            canvas.width = Math.round(displayWidth * dpr);
+            canvas.height = Math.round(displayHeight * dpr);
+
+            // Notify Emscripten if available
+            if (typeof Module !== 'undefined' && typeof Module.setCanvasSize === 'function') {
+                Module.setCanvasSize(canvas.width, canvas.height);
             }
         }
 
         // Handle window resize
         function handleResize() {
             if (!document.fullscreenElement) {
-                makeCanvasResponsive();
+                setCanvasSize();
             }
         }
 
@@ -234,27 +462,28 @@
             const canvas = document.getElementById('canvas');
             if (document.fullscreenElement) {
                 // Fullscreen mode
-                canvas.style.maxWidth = '100vw';
-                canvas.style.maxHeight = '100vh';
                 canvas.style.width = '100vw';
                 canvas.style.height = '100vh';
+                canvas.style.maxWidth = '100vw';
+                canvas.style.maxHeight = '100vh';
                 canvas.style.objectFit = 'fill';
             } else {
-                // Exit fullscreen - restore responsive
-                makeCanvasResponsive();
+                // Exit fullscreen - restore responsive size
+                setCanvasSize();
             }
         }
 
+        // Initialize canvas size immediately
+        setInitialCanvasSize();
+
         // Set up event listeners
-        window.addEventListener('load', makeCanvasResponsive);
+        window.addEventListener('load', setCanvasSize);
         window.addEventListener('resize', handleResize);
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
         document.addEventListener('mozfullscreenchange', handleFullscreenChange);
 
-        // As a default initial behavior, pop up an alert when webgl context is lost. To make your
-        // application robust, you may want to override this behavior before shipping!
-        // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
+        // WebGL context loss handler
         canvasElement.addEventListener("webglcontextlost", (e) => {
             alert('WebGL context lost. You will need to reload the page.');
             e.preventDefault();
@@ -262,16 +491,11 @@
 
         var Module = {
             print(...args) {
-                // These replacements are necessary if you render to raw HTML
-                //text = text.replace(/&/g, "&amp;");
-                //text = text.replace(/</g, "&lt;");
-                //text = text.replace(/>/g, "&gt;");
-                //text = text.replace('\n', '<br>', 'g');
                 console.log(...args);
                 if (outputElement) {
                     var text = args.join(' ');
                     outputElement.value += text + "\n";
-                    outputElement.scrollTop = outputElement.scrollHeight; // focus on bottom
+                    outputElement.scrollTop = outputElement.scrollHeight;
                 }
             },
             canvas: canvasElement,
@@ -280,7 +504,7 @@
                 if (text === Module.setStatus.last.text) return;
                 var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
                 var now = Date.now();
-                if (m && now - Module.setStatus.last.time < 30) return; // if this is a progress update, skip it if too soon
+                if (m && now - Module.setStatus.last.time < 30) return;
                 Module.setStatus.last.time = now;
                 Module.setStatus.last.text = text;
                 if (m) {
