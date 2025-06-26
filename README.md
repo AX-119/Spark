@@ -28,21 +28,56 @@ The main selling point of Spark will be its ease of use, provided by the fact th
 1.  **Clone the repository:**
     ```bash
     git clone https://github.com/AX-119/Spark.git
-    cd spark
+    cd Spark
     ```
 
-2.  **Configure and build with CMake:**
+2.  **Configure and build with CMake using presets:**
+
+    #### 🖥️ Native Release:
     ```bash
-    mkdir build
-    cmake -B build -S .
-    cmake --build build
+    cmake --preset native-release
+    cmake --build --preset native-release
+    ```
+
+    #### 🛠️ Native Debug:
+    ```bash
+    cmake --preset native-debug
+    cmake --build --preset native-debug
+    ```
+
+    #### 🌐 Web Debug (via Emscripten):
+    ```bash
+    cmake --preset web-debug
+    cmake --build --preset web-debug
+    ```
+
+    #### 🚀 Web Release (via Emscripten):
+    ```bash
+    cmake --preset web-release
+    cmake --build --preset web-release
     ```
 
 3.  **Run the application:**
-    The executable `Spark` will be located in the `build/bin` directory.
-    ```bash
-    ./build/bin/Spark
-    ```
+
+    For native builds, the executable Spark will be located in:
+    
+    `./builds/native/release/bin/Spark`
+
+    or
+
+    `./builds/native/debug/bin/Spark`
+
+
+    For web builds, the output will be located in:
+
+    `./builds/web/debug/`
+    
+    or
+
+
+    `./builds/web/release/`
+
+    ‼️NOTE: use the `emrun` command or a local HTTP server to run the resulting html file
 
 ## 🛠️ Dependencies
 
@@ -58,6 +93,9 @@ Spark utilizes the following libraries, which are fetched automatically by CMake
 
 ```
 .
+├── builds/         # Build output folders
+│   ├── native/     # Native builds (Windows, Linux, macOS)
+│   └── web/        # Web builds (WebAssembly, HTML output)
 ├── extern/         # External dependencies fetched by CMake
 ├── include/        
 │   ├── Components/ 
@@ -66,6 +104,7 @@ Spark utilizes the following libraries, which are fetched automatically by CMake
 └── src/            
     ├── Components/ 
     └── ...
+
 ```
 
 ## 🔧 Usage
@@ -78,11 +117,11 @@ You can create a new `GameObject` and add components to it like so:
 
 ```cpp
 auto scene = sceneManager.GetCurrentScene();
-    if (scene)
-    {
-        auto myGameObject = scene->EmplaceGameObject("MyObject");
-        myGameObject->AddComponent<MyCustomComponent>();
-    }
+if (scene)
+{
+    auto myGameObject = scene->EmplaceGameObject("MyObject");
+    myGameObject->AddComponent<MyCustomComponent>();
+}
 ```
 
 ### Lua Scripting
@@ -115,6 +154,8 @@ The Lua API provides access to engine features such as:
 * Drawing shapes and lines with the `Renderer`.
 * Getting mouse input.
 
+A comprehensive list of variables, functions and classes available in Lua can be found in `LuaInstance.cpp` (excuse the messy code for now)
+
 ## ‼️ Important
 The latest Sol2 version at the time of writing is v3.3.0, which is what Spark currently fetches as a dependency. 
 
@@ -124,10 +165,6 @@ To fix this, you need to update a couple of lines in `sol3-src/include/optional_
 
 See: [Emscripten fix](https://github.com/ThePhD/sol2/commit/d805d027e0a0a7222e936926139f06e23828ce9f)
 
-## 🤝 Contributing
-
-This project is a work in progress, and contributions are welcome. Please feel free to fork the repository, make changes, and submit a pull request.
-
 ## 📝 TO DO
 
 Here are some of the planned improvements and features for the future of Spark:
@@ -135,7 +172,3 @@ Here are some of the planned improvements and features for the future of Spark:
 - Splitting the engine into a static/dynamic library: Refactor the project to build the engine as a library that can be linked against, separating it more cleanly from the main application/game.
 - Updating the CMake for easier Emscripten compilation: Improve the CMake configuration to streamline the process of compiling the engine and projects to WebAssembly using the Emscripten toolchain.
 - Full runtime usability: Enhance the engine's capabilities to allow for adding and removing components, scripts, and resources on-the-fly at runtime, making it more dynamic and flexible.
-
-## 📜 License
-
-The license for this project is not specified in the provided files.

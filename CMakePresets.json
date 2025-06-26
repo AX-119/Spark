@@ -2,7 +2,7 @@
     "version": 8,
     "configurePresets": [
         {
-            "name": "native",
+            "name": "native-release",
             "displayName": "Native (Release)",
             "description": "Native release build",
             "binaryDir": "${sourceDir}/builds/native/release",
@@ -48,8 +48,8 @@
     ],
     "buildPresets": [
         {
-            "name": "native",
-            "configurePreset": "native"
+            "name": "native-release",
+            "configurePreset": "native-release"
         },
         {
             "name": "native-debug",
