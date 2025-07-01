@@ -38,6 +38,7 @@ namespace spark
 
         GameObject *m_selectedGameObject{nullptr};
         bool m_isPlaying{};
+        float m_fontSize{20.0f};
     };
 
 #ifdef __EMSCRIPTEN__

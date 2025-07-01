@@ -2,10 +2,11 @@
 #include "SceneManager.h"
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
+#include <iostream>
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten_browser_clipboard.h>
 #endif
-#include <iostream>
 
 namespace spark
 {
@@ -21,20 +22,18 @@ namespace spark
         ImGui::CreateContext();
         ImGuiIO &io = ImGui::GetIO();
         io.IniFilename = "res/configs/imgui.ini";
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
         ImGui::StyleColorsDark();
 
-        float fontSize = 20.0f;
-        io.FontDefault = io.Fonts->AddFontFromFileTTF("res/fonts/RedHatMono-Regular.ttf", fontSize);
+        io.FontDefault = io.Fonts->AddFontFromFileTTF("res/fonts/RedHatMono-Regular.ttf", m_fontSize);
 
         ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
         ImGui_ImplSDLRenderer3_Init(renderer);
 
 #ifdef __EMSCRIPTEN__
-        std::cout << "Cout works!\n";
         emscripten_browser_clipboard::paste([](std::string &&paste_data, void *callback_data [[maybe_unused]])
                                             {
                                                 std::cout << "Browser pasted: " << paste_data << "\n";
@@ -42,17 +41,6 @@ namespace spark
 
         io.GetClipboardTextFn = GetClipboardForImGui;
         io.SetClipboardTextFn = SetClipboardFromImGui;
-
-        std::cout << "Testing clipboard functions directly:" << std::endl;
-        if (io.SetClipboardTextFn)
-        {
-            io.SetClipboardTextFn(nullptr, "test_direct_call");
-        }
-        if (io.GetClipboardTextFn)
-        {
-            const char *result = io.GetClipboardTextFn(nullptr);
-            std::cout << "Direct get result: " << (result ? result : "null") << std::endl;
-        }
 #endif
     }
 
@@ -139,7 +127,6 @@ namespace spark
 
             ImGui::SameLine();
 
-            // Stop button
             if (ImGui::Button("⏹", ImVec2(30, 30)))
             {
                 m_isPlaying = false;
