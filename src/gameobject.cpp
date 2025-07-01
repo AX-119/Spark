@@ -1,57 +1,72 @@
 #include "GameObject.h"
 #include "Components/TransformComponent.h"
-#include <string>
 #include "SceneManager.h"
 #include "imgui.h"
+#include <algorithm>
+
 namespace spark
 {
     GameObject::GameObject()
     {
         m_transform = AddComponent<TransformComponent>();
     }
+
     GameObject::GameObject(const std::string &name) : m_name{name}
     {
         m_transform = AddComponent<TransformComponent>();
     }
+
+    GameObject::GameObject(std::string &&name) : m_name{std::move(name)}
+    {
+        m_transform = AddComponent<TransformComponent>();
+    }
+
     void GameObject::Init()
     {
-        for (auto &u : m_initializables)
+        for (auto *initializable : m_initializables)
         {
-            u->Init();
+            initializable->Init();
         }
+
         for (auto &child : m_children)
         {
             child->Init();
         }
     }
+
     void GameObject::Update(float dt)
     {
-        for (auto &u : m_updateables)
+        for (auto *updateable : m_updateables)
         {
-            u->Update(dt);
+            updateable->Update(dt);
         }
+
         for (auto &child : m_children)
         {
             child->Update(dt);
         }
     }
+
     void GameObject::Render()
     {
-        for (auto &r : m_renderables)
+        for (auto *renderable : m_renderables)
         {
-            r->Render();
+            renderable->Render();
         }
+
         for (auto &child : m_children)
         {
             child->Render();
         }
     }
+
     void GameObject::RenderImGui()
     {
-        for (auto &i : m_imguiRenderables)
+        for (auto *imguiRenderable : m_imguiRenderables)
         {
-            i->RenderImGui();
+            imguiRenderable->RenderImGui();
         }
+
         for (auto &child : m_children)
         {
             child->RenderImGui();
@@ -64,26 +79,25 @@ namespace spark
         ImGui::Separator();
 
         // Render all inspector-renderable components
-        for (auto &ir : m_inspectorRenderables)
+        for (auto *inspectorRenderable : m_inspectorRenderables)
         {
-            ir->RenderInspector();
+            inspectorRenderable->RenderInspector();
         }
     }
 
     void GameObject::SetParent(GameObject *newParent, bool keepWorldPos)
     {
-        // Check if newParent is valid
         if (newParent == m_parent || newParent == this || IsChild(newParent))
         {
-            // new parent was not valid...
             return;
         }
 
-        if (newParent)
+        if (newParent != nullptr)
         {
             if (keepWorldPos)
             {
-                m_transform->SetLocalPosition(m_transform->GetWorldPosition() - newParent->m_transform->GetWorldPosition());
+                m_transform->SetLocalPosition(
+                    m_transform->GetWorldPosition() - newParent->m_transform->GetWorldPosition());
             }
             else
             {
@@ -92,79 +106,100 @@ namespace spark
         }
         else
         {
-            // make a child object a root object
             m_transform->SetLocalPosition(m_transform->GetWorldPosition());
             m_transform->SetLocalRotation(m_transform->GetWorldRotation());
             m_transform->SetLocalScale(m_transform->GetWorldScale());
         }
 
-        if (m_parent)
+        if (m_parent != nullptr)
         {
-            const auto it = std::ranges::find_if(m_parent->m_children,
-                                                 [&](const std::unique_ptr<GameObject> &ptr)
-                                                 { return ptr.get() == this; });
+            auto it = std::find_if(m_parent->m_children.begin(), m_parent->m_children.end(),
+                                   [this](const std::unique_ptr<GameObject> &ptr)
+                                   { return ptr.get() == this; });
 
-            // If found
             if (it != m_parent->m_children.end())
             {
-                // Release the unique pointer from its cleanup/management duties
-                //(to prevent the destructor from being called when we remove it from the owning vector)
-                it->release();
-                // Remove the released unique pointer from the vector
-                // Which would be a unique pointer to nullptr
+                it->release(); // Release ownership
                 m_parent->m_children.erase(it);
             }
+
+            auto rawIt = std::find(m_parent->m_childrenRawPtrs.begin(),
+                                   m_parent->m_childrenRawPtrs.end(), this);
+            if (rawIt != m_parent->m_childrenRawPtrs.end())
+            {
+                m_parent->m_childrenRawPtrs.erase(rawIt);
+            }
         }
-        else if (m_parent == nullptr && newParent != nullptr)
+        else if (newParent != nullptr)
         {
-            // Remove this object from the Scene's GO list
-            // Can't use the Remove function as the GO's are stored as unique pointers.
-            // Remove would destroy this object
-            // The Pop function releases a given object, erases the unique pointer from the scene's list and returns the raw pointer. Ready to transfer ownership
-            // Maybe a more descriptive name is necessary...
             SceneManager::GetInstance().GetCurrentScene()->PopGameObject(this);
-            // parent->m_children.emplace_back(obj);
         }
-        // We can now overwrite who our parent is
+
         m_parent = newParent;
 
-        if (m_parent)
+        if (m_parent != nullptr)
         {
-            // Using emplace_back will construct the unique pointer from the raw this pointer we pass in
             m_parent->m_children.emplace_back(this);
             m_parent->m_childrenRawPtrs.emplace_back(this);
         }
         else
         {
-            SceneManager::GetInstance().GetCurrentScene()->AddGameObject(std::unique_ptr<GameObject>{this});
+            SceneManager::GetInstance().GetCurrentScene()->AddGameObject(
+                std::unique_ptr<GameObject>{this});
         }
     }
-    GameObject *GameObject::GetParent() const
+
+    bool GameObject::IsChild(GameObject *gameObject) const noexcept
     {
-        return m_parent;
+        return std::find(m_childrenRawPtrs.begin(), m_childrenRawPtrs.end(), gameObject) != m_childrenRawPtrs.end();
     }
-    const std::vector<GameObject *> &GameObject::GetChildren() const
+
+    void GameObject::CacheInterfacePointers(Component *component)
     {
-        return m_childrenRawPtrs;
-    }
-    bool GameObject::IsChild(GameObject *gameObject)
-    {
-        if (auto it = std::ranges::find(m_childrenRawPtrs, gameObject); it != m_childrenRawPtrs.end())
+        if (auto *initializable = dynamic_cast<IInitializable *>(component))
         {
-            return true;
+            m_initializables.emplace_back(initializable);
         }
-        return false;
+        if (auto *updateable = dynamic_cast<IUpdateable *>(component))
+        {
+            m_updateables.emplace_back(updateable);
+        }
+        if (auto *renderable = dynamic_cast<IRenderable *>(component))
+        {
+            m_renderables.emplace_back(renderable);
+        }
+        if (auto *imguiRenderable = dynamic_cast<IImGuiRenderable *>(component))
+        {
+            m_imguiRenderables.emplace_back(imguiRenderable);
+        }
+        if (auto *inspectorRenderable = dynamic_cast<IInspectorRenderable *>(component))
+        {
+            m_inspectorRenderables.emplace_back(inspectorRenderable);
+        }
     }
-    void GameObject::Delete()
+
+    void GameObject::RemoveFromInterfaceCaches(Component *component)
     {
-        m_isToBeDeleted = true;
+        if (auto *initializable = dynamic_cast<IInitializable *>(component))
+        {
+            RemoveInterfacePtr(m_initializables, initializable);
+        }
+        if (auto *updateable = dynamic_cast<IUpdateable *>(component))
+        {
+            RemoveInterfacePtr(m_updateables, updateable);
+        }
+        if (auto *renderable = dynamic_cast<IRenderable *>(component))
+        {
+            RemoveInterfacePtr(m_renderables, renderable);
+        }
+        if (auto *imguiRenderable = dynamic_cast<IImGuiRenderable *>(component))
+        {
+            RemoveInterfacePtr(m_imguiRenderables, imguiRenderable);
+        }
+        if (auto *inspectorRenderable = dynamic_cast<IInspectorRenderable *>(component))
+        {
+            RemoveInterfacePtr(m_inspectorRenderables, inspectorRenderable);
+        }
     }
-    bool GameObject::GetIsToBeDeleted() const
-    {
-        return m_isToBeDeleted;
-    }
-    std::string GameObject::GetName() const
-    {
-        return m_name;
-    }
+
 } // namespace spark

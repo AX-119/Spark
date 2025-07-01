@@ -137,6 +137,8 @@ namespace spark
         ImGui::End();
     }
 
+#ifdef __EMSCRIPTEN__
+
     std::string g_clipboardContent{};
     char const *GetClipboardForImGui(void *userData [[maybe_unused]])
     {
@@ -149,4 +151,6 @@ namespace spark
         g_clipboardContent = text;
         emscripten_browser_clipboard::copy(g_clipboardContent);
     }
+#endif
+
 }

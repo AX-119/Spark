@@ -1,5 +1,5 @@
 {
-    "version": 8,
+    "version": 9,
     "configurePresets": [
         {
             "name": "native-release",
@@ -49,11 +49,13 @@
     "buildPresets": [
         {
             "name": "native-release",
-            "configurePreset": "native-release"
+            "configurePreset": "native-release",
+            "configuration": "Release"
         },
         {
             "name": "native-debug",
-            "configurePreset": "native-debug"
+            "configurePreset": "native-debug",
+            "configuration": "Debug"
         },
         {
             "name": "web-debug",

@@ -5,6 +5,9 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
+#include <unordered_map>
+#include <typeindex>
+#include <type_traits>
 
 #include "Component.h"
 #include "IInitializable.h"
@@ -17,11 +20,13 @@ namespace spark
 {
     class Component;
     class TransformComponent;
+
     class GameObject final
     {
     public:
         explicit GameObject();
         explicit GameObject(const std::string &name);
+        explicit GameObject(std::string &&name);
 
         ~GameObject() = default;
 
@@ -37,61 +42,61 @@ namespace spark
         void RenderInspector();
 
         void SetParent(GameObject *newParent, bool keepWorldPos = true);
-        GameObject *GetParent() const;
-        const std::vector<GameObject *> &GetChildren() const;
-        bool IsChild(GameObject *gameObject); // check if given GO is child of this
+        GameObject *GetParent() const noexcept { return m_parent; }
+        const std::vector<GameObject *> &GetChildren() const noexcept { return m_childrenRawPtrs; }
+        bool IsChild(GameObject *gameObject) const noexcept;
 
-        void Delete();
-        bool GetIsToBeDeleted() const;
+        void Delete() noexcept { m_isToBeDeleted = true; }
+        bool GetIsToBeDeleted() const noexcept { return m_isToBeDeleted; }
 
-        std::string GetName() const;
+        const std::string &GetName() const noexcept { return m_name; }
+        void SetName(const std::string &name) { m_name = name; }
+        void SetName(std::string &&name) { m_name = std::move(name); }
 
         template <typename T, typename... Args>
         T *AddComponent(Args &&...args)
         {
-            // TODO: Check if we're not adding a duplicate
-            //  Might be a good idea to use dictionaries instead of vectors too
-            //  could decrease the amount of dynamic casting that's happening
             static_assert(std::is_base_of_v<Component, T>, "T must be a Component");
+
+            // Check for duplicate components
+            std::type_index typeIdx = std::type_index(typeid(T));
+            if (m_componentMap.find(typeIdx) != m_componentMap.end())
+            {
+                return static_cast<T *>(m_componentMap[typeIdx]);
+            }
+
             auto component = std::make_unique<T>(this, std::forward<Args>(args)...);
             T *rawPtr = component.get();
 
+            m_componentMap[typeIdx] = rawPtr;
             m_components.emplace_back(std::move(component));
 
-            if (auto *i = dynamic_cast<IInitializable *>(rawPtr))
-            {
-                m_initializables.emplace_back(i);
-            }
-            if (auto *u = dynamic_cast<IUpdateable *>(rawPtr))
-            {
-                m_updateables.emplace_back(u);
-            }
-            if (auto *r = dynamic_cast<IRenderable *>(rawPtr))
-            {
-                m_renderables.emplace_back(r);
-            }
-            if (auto *i = dynamic_cast<IImGuiRenderable *>(rawPtr))
-            {
-                m_imguiRenderables.emplace_back(i);
-            }
-            if (auto *ir = dynamic_cast<IInspectorRenderable *>(rawPtr))
-            {
-                m_inspectorRenderables.emplace_back(ir);
-            }
+            CacheInterfacePointers(rawPtr);
+
             return rawPtr;
         }
 
         template <typename T>
-        T *GetComponent()
+        T *GetComponent() noexcept
         {
-            for (auto &c : m_components)
-            {
-                if (auto *casted = dynamic_cast<T *>(c.get()))
-                {
-                    return casted;
-                }
-            }
-            return nullptr;
+            std::type_index typeIdx = std::type_index(typeid(T));
+            auto it = m_componentMap.find(typeIdx);
+            return (it != m_componentMap.end()) ? static_cast<T *>(it->second) : nullptr;
+        }
+
+        template <typename T>
+        const T *GetComponent() const noexcept
+        {
+            std::type_index typeIdx = std::type_index(typeid(T));
+            auto it = m_componentMap.find(typeIdx);
+            return (it != m_componentMap.end()) ? static_cast<const T *>(it->second) : nullptr;
+        }
+
+        template <typename T>
+        bool HasComponent() const noexcept
+        {
+            std::type_index typeIdx = std::type_index(typeid(T));
+            return m_componentMap.find(typeIdx) != m_componentMap.end();
         }
 
         template <typename T>
@@ -99,54 +104,50 @@ namespace spark
         {
             static_assert(std::is_base_of_v<Component, T>, "T must be a Component");
 
-            T *target = GetComponent<T>();
-            if (!target)
+            std::type_index typeIdx = std::type_index(typeid(T));
+            auto it = m_componentMap.find(typeIdx);
+            if (it == m_componentMap.end())
                 return;
 
-            if (auto *i = dynamic_cast<IInitializable *>(target))
-            {
-                RemoveInterfacePtr(m_initializables, i);
-            }
-            if (auto *u = dynamic_cast<IUpdateable *>(target))
-            {
-                RemoveInterfacePtr(m_updateables, u);
-            }
-            if (auto *r = dynamic_cast<IRenderable *>(target))
-            {
-                RemoveInterfacePtr(m_renderables, r);
-            }
-            if (auto *i = dynamic_cast<IImGuiRenderable *>(target))
-            {
-                RemoveInterfacePtr(m_imguiRenderables, i);
-            }
-            if (auto *ir = dynamic_cast<IInspectorRenderable *>(target))
-            {
-                RemoveInterfacePtr(m_inspectorRenderables, ir);
-            }
+            Component *target = it->second;
+
+            RemoveFromInterfaceCaches(target);
+            m_componentMap.erase(it);
             std::erase_if(m_components, [target](const std::unique_ptr<Component> &comp)
                           { return comp.get() == target; });
         }
 
+        TransformComponent *GetTransform() const noexcept { return m_transform; }
+
     private:
         std::string m_name{"GameObject"};
-        bool m_isToBeDeleted{};
-        GameObject *m_parent{};
+        bool m_isToBeDeleted{false};
+        GameObject *m_parent{nullptr};
         std::vector<std::unique_ptr<GameObject>> m_children{};
         std::vector<GameObject *> m_childrenRawPtrs{};
 
         std::vector<std::unique_ptr<Component>> m_components;
+        std::unordered_map<std::type_index, Component *> m_componentMap;
+
         std::vector<IInitializable *> m_initializables;
         std::vector<IUpdateable *> m_updateables;
         std::vector<IRenderable *> m_renderables;
         std::vector<IImGuiRenderable *> m_imguiRenderables;
         std::vector<IInspectorRenderable *> m_inspectorRenderables;
 
-        TransformComponent *m_transform{};
+        TransformComponent *m_transform{nullptr};
+
+        void CacheInterfacePointers(Component *component);
+        void RemoveFromInterfaceCaches(Component *component);
 
         template <typename T>
         void RemoveInterfacePtr(std::vector<T *> &list, T *ptr)
         {
-            std::erase(list, ptr);
+            auto it = std::find(list.begin(), list.end(), ptr);
+            if (it != list.end())
+            {
+                list.erase(it);
+            }
         }
     };
 }
