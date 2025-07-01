@@ -75,7 +75,7 @@ namespace spark
     void EditorUI::Render(SceneManager &sceneManager)
     {
         SetupDockspace();
-        RenderPlaybackControls();
+        // RenderPlaybackControls();
 
         if (m_sceneGraphPanel)
         {
